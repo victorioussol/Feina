@@ -172,6 +172,7 @@ for pair in \
   "feina-onboard.sh:/usr/local/bin/feina-onboard.sh" \
   "feina-enable.py:/usr/local/bin/feina-enable.py" \
   "feina-honcho-sync.py:/usr/local/bin/feina-honcho-sync.py" \
+  "feina-telegram-pending.py:/usr/local/bin/feina-telegram-pending.py" \
   "feina:/usr/local/bin/feina" \
   "telegram-pair.py:/usr/local/bin/feina-stack-telegram-pair.py" \
   "op-enable.py:/usr/local/bin/feina-stack-op-enable"; do

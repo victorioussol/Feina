@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 FILES_DIR="$ROOT/files"
 
-python3 -m py_compile build_template.py files/op-enable.py files/telegram-pair.py files/feina-enable.py files/feina-honcho-sync.py
+python3 -m py_compile build_template.py files/op-enable.py files/telegram-pair.py files/feina-enable.py files/feina-honcho-sync.py files/feina-telegram-pending.py
 python3 -c "import yaml; yaml.safe_load(open('files/config.yaml'))"
 python3 build_template.py
 
@@ -78,6 +78,19 @@ for ch, tools in (c.get("platform_toolsets") or {}).items():
 PY
 
 test ! -f "$FILES_DIR/wallpaper.jpg" || { echo "wallpaper.jpg must be removed" >&2; exit 1; }
+
+if ! grep -q 'setup-pre' "$FILES_DIR/feina-onboard.sh" && ! grep -q 'allow-telegram' "$FILES_DIR/feina-onboard.sh"; then
+  echo "feina-onboard must document v1.0 pre/meeting flow and allow-telegram" >&2
+  exit 1
+fi
+if ! grep -q 'account/capacity' "$ROOT/ops/launch-client.sh"; then
+  echo "launch-client.sh must preflight Orgo capacity (no auto-purchase)" >&2
+  exit 1
+fi
+if rg -n '^OPENAI_API_KEY=' "$FILES_DIR/hermes.env" 2>/dev/null; then
+  echo "OPENAI_API_KEY must not be baked into hermes.env" >&2
+  exit 1
+fi
 
 shellcheck -e SC1090,SC1091 -x files/bootstrap.sh files/gateway-run.sh files/feina-onboard.sh files/feina \
   files/agentphone-bridge-run.sh \

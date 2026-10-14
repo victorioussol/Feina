@@ -9,106 +9,77 @@ Hermes is pinned to **v0.21.7** (`71d34bad1045610252eda02ee79549436896e784`).
 | Piece | Role |
 |--------|------|
 | Hermes gateway | Supervised agent (auto-restart) |
-| Model | **openai-codex** (ChatGPT OAuth) — **MVP default**; no fallback model |
-| Telegram | QR bot creation (`feina-onboard telegram-qr`), BotFather fallback |
-| Composio | Client's Gmail, Calendar, Sheets, etc. |
+| Model | **openai-codex** (ChatGPT OAuth device code) — **no OpenAI API key** on the VM |
+| Telegram | Bot token installed by Feina (`feina-onboard telegram`); client allowlisted after Start |
+| Composio | Client's Gmail, Calendar, Sheets — connected **in-meeting**; key pasted by Feina only |
 | AgentMail | Agent inbox for CSVs / invoices |
-| Notes vault | Markdown vault at `/root/Documents/HermesVault` via `mcp-server-filesystem` (installed binary, not `npx` at runtime) |
-| Latitude | Optional tracing (no-op until keys set); core patch is non-fatal |
+| Honcho memory | Default provider when `HONCHO_API_KEY` is set (fail-open without key) |
+| Notes vault | Markdown vault at `/root/Documents/HermesVault` |
+| Latitude | Optional tracing |
 | 1Password | Optional per-client vault (`Feina - <Client>`) |
 | Persona | Calm chief-of-staff; **approvals on** — full draft + explicit yes before any send |
 
 ## On by default (Basic)
 
-Composio, AgentMail, Latitude, notes vault MCP, and **Honcho memory** (`memory.provider: honcho`) — enabled in config. Runtime keys still required: `HONCHO_API_KEY` comes from the client's 1Password / template secret (`op://Feina/Hermes Agent Secrets/HONCHO_API_KEY`). If the key is missing, the gateway **fail-opens** (Honcho off, no crash). Ops can turn it off with `feina disable honcho`.
+Composio MCP (key added in-meeting), AgentMail, Latitude, notes vault, and **Honcho memory** (`memory.provider: honcho` when `HONCHO_API_KEY` is present). Keys land via Feina pre-setup (`feina-onboard op-token` / individual commands). **Linear** MCP stays **off** unless you `feina enable linear`.
 
-**Linear** MCP stays **off** on client computers (`feina enable linear` only when you deliberately opt in).
+## v1.0 onboarding (two phases)
 
-## Installed but off by default (enable per client)
+Run `feina-onboard setup` on the VM for the full checklist.
 
-Packages, skills, and MCP entries are **present in the image** with `enabled: false` and empty keys until you turn them on:
+### A) Feina pre-setup (before the client meeting)
 
-| Integration | Enable |
-|-------------|--------|
-| AgentPhone (+ webhook bridge) | `feina enable agentphone` then set `AGENTPHONE_*` keys |
-| AgentCard | `feina enable agentcard` |
-| vidIQ, IdeaBrowser, Linear | `feina enable vidiq` / `ideabrowser` / `linear` |
-| X (x-docs, xapi, xapi-app-only) | `feina enable x-docs` etc. |
-| Spotify / xAI plugins | `feina enable spotify` / `xai` |
-| OpenRouter / Anthropic / Vercel gateway / Meta API | `feina enable openrouter` / `anthropic` (add keys first) |
+1. Bootstrap the VM (`ops/launch-client.sh` or manual `bootstrap.sh`).
+2. **ChatGPT** — Feina completes OAuth (no API key): `feina-onboard model-codex`.
+3. **Telegram** — Feina creates the bot in BotFather, then `feina-onboard telegram <token>`; `feina-onboard gateway-test`.
+4. **Honcho, AgentMail, Latitude** — Feina sets keys (`op-token` or `honcho` / `agentmail` / `latitude`).
+5. **`feina-onboard safety-check`** before the call.
 
-List state: `feina list`. Setup keys: `feina-onboard …`.
+### B) In-meeting (client)
 
-## Removed or blocked (security / product)
+1. Client creates **their own Composio** account and connects apps in Composio's UI.
+2. Client gives Feina the Composio key → Feina runs `feina-onboard composio <key>` (client never touches the VM).
+3. Client taps **Start** in Telegram → Feina runs `pending-telegram` then `allow-telegram <user_id>`.
+4. Client sends a test message.
 
-- **Orgo control on clients:** `orgo` MCP and `orgo-desktop-local` plugin stay in the tree but **`feina enable orgo` is refused**; `ORGO_*` keys are stripped from `.env` and never bridged from the launch vault. Computer-use **skills** document ops workflows only.
-- **Nous** and other non-codex defaults (MVP is ChatGPT sign-in only).
-- Nick's aggressive persona and approvals-off (Feina SOUL + draft-and-yes approvals).
-- Desktop onboarding UI, wallpaper autostart (headless client product).
+## Installed but off by default
 
-Industry packs are **not** baked in — use `/root/.hermes/skills/client-drop/`.
+AgentPhone, AgentCard, vidIQ, X, IdeaBrowser, Spotify, alternate model providers, etc. — `feina enable <name>`.
 
-## Launch a new client
+## Blocked on clients
 
-Plain-language flow for Feina ops (not the client):
+- Orgo fleet control (`feina enable orgo` refused); `ORGO_*` stripped from `.env`.
+- Computer-use skills document **Feina ops only** workflows.
 
-1. **Prepare secrets** (1Password vault `Feina - <Client>`, optional OpenRouter cap for later, AgentMail inbox, Composio/Latitude when ready). Never put the Orgo API key on the client VM.
-2. **Create the computer** in Feina's Orgo workspace (medium 8 GB recommended for Chrome-heavy tools). From your ops machine:
-   ```bash
-   export ORGO_API_KEY=sk_live_...
-   ./ops/launch-client.sh <workspace_id> <slug> 8 2
-   ```
-   Or create a blank VM and bootstrap manually (below).
-3. **Bootstrap** (idempotent, ~35–50 min). On the new computer as root:
-   ```bash
-   export FEINA_STACK_REF=feina   # branch or tag
-   mkdir -p /opt/feina-stack && git clone --depth 1 -b "$FEINA_STACK_REF" \
-     https://github.com/victorioussol/Feina /opt/feina-stack/src
-   nohup bash /opt/feina-stack/src/files/bootstrap.sh >> /var/log/feina-bootstrap.log 2>&1 &
-   tail -f /var/log/feina-bootstrap.log   # wait for "feina-stack install complete"
-   ```
-   One-liner over curl (pinned ref):
-   ```bash
-   curl -fsSL "https://raw.githubusercontent.com/victorioussol/Feina/feina/files/bootstrap.sh" | bash
-   ```
-   *(The curl path only works after this branch is pushed; prefer git clone until then.)*
-4. **Model (MVP)** — ChatGPT account Feina owns for the client:
-   ```bash
-   feina-onboard setup          # prints step list
-   feina-onboard model-codex    # copy URL + device code; sign in at chatgpt.com
-   ```
-   Alternate models later: `feina enable openrouter` (or `anthropic`) after adding keys — not part of first-boot MVP.
-5. **Telegram** — Feina's Telegram account scans the QR (expires in minutes):
-   ```bash
-   export FEINA_BOT_NAME="Vince · Feina"
-   feina-onboard telegram-qr
-   # PNG: /root/telegram_qr.png — add client later:
-   feina-onboard allow-user <telegram_user_id>
-   ```
-   See skill `hermes-gateway-onboarding` → `references/telegram-managed-qr-onboarding.md`.
-6. **Honcho** — `feina-onboard op-token …` (vault includes `HONCHO_API_KEY`) or `feina-onboard honcho <key>`.
-7. **Keys** — `feina-onboard composio …`, `agentmail …`, `latitude …` as needed.
-8. **Industry pack** — copy skills into `/root/.hermes/skills/client-drop/` and seed vault notes.
-9. **Optional integrations** — `feina enable agentphone` (etc.), then add keys and restart checks via `feina-onboard status`.
-10. **Verify** — `feina-onboard status` (Hermes 0.21.7, Honcho key or fail-open, orgo MCP off, linear off, no `ORGO_*` in `.env`).
+## Launch a new client (ops)
 
-**Meeting day:** client connects Composio apps and sends a Telegram message; you `allow-user` their id.
+Requires an **account-wide** `ORGO_API_KEY` on your ops machine.
 
-**Offboard:** export vault, revoke keys, delete bot, then `./ops/offboard-client.sh <computer_id> --delete-computer`.
+```bash
+export ORGO_API_KEY=sk_live_...
+./ops/launch-client.sh <workspace_id> <slug> 8 2
+```
+
+The script **lists workspace computers and account capacity** first. If there is no free slot it exits with **`needs human approval: no free slot`** — it does **not** auto-purchase or upgrade Orgo capacity.
+
+Then on the VM (pre-setup):
+
+```bash
+feina-onboard setup-pre
+# … model-codex, telegram, secrets, safety-check
+```
 
 ## Build the Orgo template (Scale plan)
 
 ```bash
-python3 build_template.py              # assemble feina-stack.resolved.json + validate
+python3 build_template.py
 VERSION=1.0.0 python3 build_template.py --build   # needs ORGO_API_KEY + Scale
 ```
-
-Publishing templates requires Orgo Scale; until then use bootstrap on blank computers.
 
 ## Credit
 
 Forked from **Nick Vasilescu's [nicks-stack](https://github.com/nickvasilescu/nicks-stack)** (MIT). See [LICENSE](LICENSE).
 
-## Untested in this repo
+## Untested in CI
 
-No Orgo build was run from CI here. Before launch, verify on a real VM: full bootstrap log, `hermes --version` = 0.21.7, Telegram connect, ChatGPT (codex) OAuth, `feina-onboard status` clean, and optional `feina enable` paths as needed.
+Full VM smoke: bootstrap, codex OAuth, Telegram token + allow-telegram, Composio in-meeting, `safety-check`, Honcho fail-open.

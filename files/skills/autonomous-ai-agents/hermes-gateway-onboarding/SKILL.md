@@ -29,6 +29,11 @@ A gateway setup is not complete when config is written. It is complete only when
 5. The gateway process is actually running, or a durable start mechanism is installed.
 6. A real inbound or outbound platform message has been tested when credentials are available.
 
+## Feina client v1.0 (Telegram)
+
+- **Pre-meeting (Feina):** `feina-onboard telegram <bot_token>` after BotFather; test with `gateway-test`. No OpenAI API key — use `model-codex` OAuth only.
+- **In-meeting (client):** client taps **Start**; Feina runs `pending-telegram` then `allow-telegram <user_id>`. See `references/telegram-managed-qr-onboarding.md` for QR/BotFather fallbacks.
+
 ## General workflow
 
 1. Load current Hermes context first.
