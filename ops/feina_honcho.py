@@ -513,7 +513,7 @@ def verify_honcho_on_vm(
 
     cmd = (
         "set -euo pipefail\n"
-        f"feina-onboard status 2>/dev/null | grep -qF 'workspace {workspace_id}'"
+        f"/usr/local/bin/feina-onboard status 2>/dev/null | grep -qF 'workspace {workspace_id}'"
     )
     try:
         orgo_bash(api_base, orgo_key, computer_id, cmd)
