@@ -12,7 +12,7 @@ metadata:
 
 Use this skill to review Hermes Agent activity through Latitude telemetry and turn raw traces into operational insight. It does not replace source-of-truth inspection of files, apps, or live systems; Latitude tells you what happened in observed runs, not whether the outside world is currently correct. Prefer the Latitude MCP server when available; fall back to the `terminal` tool with the `latitude` CLI only when MCP tools are missing.
 
-Also use for **multi-tenant fleet coverage**: "are Momentum VMs in Latitude?", "should we add everything?", project-per-customer layout, OTEL resource conventions, Orgo computer × Latitude service audits. Full procedure: `references/orgo-fleet-coverage.md`. For **new customer project + install** (including thin pilots when Nick asks): `references/hermes-otel-backfill.md` (plugin path preferred for Telegram pilots).
+Also use for **multi-tenant fleet coverage**: "are Momentum VMs in Latitude?", "should we add everything?", project-per-customer layout, OTEL resource conventions, Orgo computer × Latitude service audits. Full procedure: `references/orgo-fleet-coverage.md`. For **new customer project + install** (including thin pilots when the client asks): `references/hermes-otel-backfill.md` (plugin path preferred for Telegram pilots).
 
 ## When to Use
 
@@ -23,7 +23,7 @@ Also use for **multi-tenant fleet coverage**: "are Momentum VMs in Latitude?", "
 - "Turn the workflow we just did into a reusable skill using Latitude evidence."
 - "Are customer / Momentum / fleet VMs in Latitude?" / "should we add everything to Latitude?"
 - "Are customers/agencies actually using these agents?" / "is this adoption or only provisioning?" Follow `references/customer-adoption-analysis.md`; report strict confirmed-use and broader telemetry counts separately.
-- Multi-tenant layout: dewey vs customer projects, OTEL service naming, coverage gaps.
+- Multi-tenant layout: Feina ops vs customer projects, OTEL service naming, coverage gaps.
 - Create monitors or triage escalating flagger signals on a customer project.
 - "Set up Latitude for Brennan / Budgetdog / customer X" (project create + backfill).
 - Latitude UI stuck on "Waiting for your first trace" after wiring.
@@ -41,7 +41,7 @@ Canonical path: use `mcp__latitude__listProjects` to get the project slug, then 
 
 Fleet coverage path: follow `references/orgo-fleet-coverage.md` (Orgo inventory + service aggregation + gap report). Do not answer "is the fleet on Latitude?" from memory.
 
-New-customer / pilot setup path: follow `references/hermes-otel-backfill.md` (`latitude projects create` + **plugin or** OTEL bootstrap + verify `traces list`). Never put customers into `dewey`. Files alone often leave the UI on "Waiting for first trace."
+New-customer / pilot setup path: follow `references/hermes-otel-backfill.md` (`latitude projects create` + **plugin or** OTEL bootstrap + verify `traces list`). Never put customers into `Feina ops`. Files alone often leave the UI on "Waiting for first trace."
 
 ## Quick Reference
 
@@ -52,7 +52,7 @@ New-customer / pilot setup path: follow `references/hermes-otel-backfill.md` (`l
 - `references/monitors-and-signal-triage.md`: flat CreateMonitorBody, **dry-run false positive**, fleet monitor pack, escalating signal triage, shallow-span fallback to conversation.
 - `references/latitude-signals-best-practices.md`: official-doc-grounded guidance for signals, saved searches, monitors, annotations, capture, and default thresholds.
 - `references/implementation-patterns.md`: API auth, **flat monitor create** (not nested rule), inline monitor fallbacks, metric units, capture summaries, validation.
-- `references/dewey-telemetry-durability.md`: durable editable-package patches, metric units, API-key vs OAuth saved-search behavior.
+- `references/Feina ops-telemetry-durability.md`: durable editable-package patches, metric units, API-key vs OAuth saved-search behavior.
 - `mcp__latitude__listProjects`: list project slugs.
 - `mcp__latitude__listTraces`: newest trace rows, session IDs, cost, tokens, errors.
 - `mcp__latitude__getTrace`: trace metadata and captured conversation, if stored.
@@ -69,12 +69,12 @@ New-customer / pilot setup path: follow `references/hermes-otel-backfill.md` (`l
 0. **If the question is fleet coverage / multi-tenant setup**, follow `references/orgo-fleet-coverage.md` first.
    - Completion: matrix summary with coverage %, emitters, P0 gaps, recommendation (not "add everything").
 
-0b. **If Nick wants Latitude set up for a customer**, follow `references/hermes-otel-backfill.md`.
-   - Completion: project exists; plugin and/or bootstrap on box; **at least one row in `traces list`** (smoke or `hermes chat -Q`); Nick told spend starts at $0 until traffic (tokens may still count).
+0b. **If the client wants Latitude set up for a customer**, follow `references/hermes-otel-backfill.md`.
+   - Completion: project exists; plugin and/or bootstrap on box; **at least one row in `traces list`** (smoke or `hermes chat -Q`); the client told spend starts at $0 until traffic (tokens may still count).
 
 1. Resolve scope.
    - If the user names a project, use that slug.
-   - Customer fleets: use that customer's project (`momentumclaw`, `budgetdog`, etc.), never default customer traffic into `dewey`.
+   - Customer fleets: use that customer's project (`momentumclaw`, `budgetdog`, etc.), never default customer traffic into `Feina ops`.
    - If they say "just now" or "this conversation," inspect recent traces first and use `session_search` only for missing conversational context.
    - Completion: you have a project slug, a time range, and any stated focus such as cost, errors, latency, skill authoring, fleet coverage, or tool use.
 
@@ -118,7 +118,7 @@ New-customer / pilot setup path: follow `references/hermes-otel-backfill.md` (`l
 6. If implementing resources, follow the implementation checklist.
    - **Monitors create = flat body** (`name`, `target`, `severity`, `trigger`, `metric`, `condition`). Nested `rule` from list responses → 400 Invalid input. See `references/monitors-and-signal-triage.md`.
    - **`--dry-run` is not schema-safe:** nested-rule bodies can dry-run OK and still 400 on live create. Confirm with live create + `monitors list`.
-   - High-volume fleets: prefer **errorRate** for error spikes, not Dewey-style raw count of 5.
+   - High-volume fleets: prefer **errorRate** for error spikes, not Feina ops-style raw count of 5.
    - If project has many flagger signals and **zero** monitors: create the five ops monitors + triage escalating; do not invent more signals.
    - Escalating triage: `signals listTraces` → map service to computer → `traces get` conversation when `listSpans` is shallow.
    - Prefer saved searches when OAuth is available. If create returns OAuth/403 under API-key, use inline savedSearch targets (`id:null`). `signals monitor` may also 400 under API-key — leave flagger active.
@@ -152,24 +152,24 @@ New-customer / pilot setup path: follow `references/hermes-otel-backfill.md` (`l
 - **Flagship volume can hide gaps** (Mia-class can dominate ~90% of traces while eng boxes emit nothing).
 - **OpenClaw-only boxes** will not appear as `hermes-*` services; say so explicitly.
 - **Gateway PID without `OTEL_*` is not definitive** if Latitude already shows that service; confirm with a fresh interaction after instrumentation changes.
-- Never mix customer fleets into `dewey` or other customers' projects.
+- Never mix customer fleets into `Feina ops` or other customers' projects.
 - Do not recommend full-fidelity prompt capture on insurance/legal customer fleets by default.
 - **List≠create for monitors:** replaying nested `rule` JSON into create fails; use flat CreateMonitorBody.
 - **Dry-run false positive:** dry-run can accept invalid nested create bodies; only live create + list proves success.
 - **Shallow spans:** single `openai.chat` span does not mean no tools — read conversation from `traces get`.
 - **Flagger flood ≠ done:** dozens of signals with zero monitors still need an ops monitor pack.
-- **Fleet OTEL may be product-provisioned:** customer workbench provision (e.g. MomentumClaw `provision.ts`) can install Latitude via OTel `.pth` + `~/.hermes/.latitude.json` (project default `momentumclaw`) fail-open. Prefer that over hand-copying Dewey `LATITUDE_*` packs onto large fleets. OpenClaw-only product APIs will not emit `hermes-*` services.
+- **Fleet OTEL may be product-provisioned:** customer workbench provision (e.g. MomentumClaw `provision.ts`) can install Latitude via OTel `.pth` + `~/.hermes/.latitude.json` (project default `momentumclaw`) fail-open. Prefer that over hand-copying Feina ops `LATITUDE_*` packs onto large fleets. OpenClaw-only product APIs will not emit `hermes-*` services.
 - **Coverage work ≠ monitor work:** after an Orgo×Latitude matrix, still check `monitors list` on the customer project; zero monitors is a separate action pack.
 - **`.latitude.json` present ≠ instrumented:** still need gateway-venv OTel packages, `latitude_bootstrap.pth`, and a live gateway; see `references/hermes-otel-backfill.md`.
 - **Gateway kill inside Orgo exec:** naive kill of hermes gateway can SIGTERM the exec (−15) after files write; respawn supervisor with `start_new_session` and re-check port.
 - **User said Hermes-only:** skip OpenClaw API dual-path work; instrument and operate `hermes-*` services only.
 - **OTel pin clash:** openai 0.61.0 + anthropic 0.53.0 fails pip — use anthropic **0.61.0**.
-- **Pilot Latitude when asked:** Budgetdog-class single-box still gets own project + backfill if Nick asks.
+- **Pilot Latitude when asked:** Budgetdog-class single-box still gets own project + backfill if the client asks.
 - **Spend before setup is not recoverable** — $0 in Latitude until post-setup traffic.
 - **Never put API keys in remote exec source** that surfaces in `pgrep`/logs.
 - **"Waiting for first trace" after wiring** — project/files alone are not enough. Smoke-test OTLP (`send_test_trace.py`), enable `latitude-telemetry-hermes` + `LATITUDE_PROJECT` in gateway env, restart on the VM, force one `hermes chat -Q` turn, then `traces list`. Hard-refresh the UI.
 - **Tokens without cost** — OpenRouter/Grok may show tokens with Latitude cost still $0; report both.
-- **Host blocks gateway restart strings** — Dewey terminal may refuse commands containing gateway kill/restart even when intended for a remote VM; use Orgo bash/API only.
+- **Host blocks gateway restart strings** — Feina ops terminal may refuse commands containing gateway kill/restart even when intended for a remote VM; use Orgo bash/API only.
 - **Unquoted `.env` values with spaces** break `source` (e.g. user names) and can leave gateway without Latitude env.
 
 ## Verification
@@ -184,4 +184,4 @@ For implementation work, also verify resource read-back and unit correctness:
 - capture/instrumentation changes compile;
 - a synthetic no-content-mode test proves summary attributes are present and raw test secrets are absent;
 - a fresh live trace is inspected when possible before claiming end-to-end success.
-- customer pilot setup: `latitude traces list --project-slug <slug>` returns ≥1 item before telling Nick "it's live".
+- customer pilot setup: `latitude traces list --project-slug <slug>` returns ≥1 item before telling the client "it's live".

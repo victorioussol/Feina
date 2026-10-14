@@ -39,7 +39,7 @@ When the user asks to **fund the wallet / add money / Apple Pay or Google Pay**:
 - MCP transport: Streamable HTTP.
 - Authentication: OAuth 2.0 / OAuth 2.1 PKCE, no API key.
 - A reachable email inbox or phone number for AgentCard magic-code login.
-- If using the Dewey setup, AgentMail inbox `${AGENTMAIL_INBOX}` can receive WorkOS AgentCard sign-in codes.
+- If using the Feina ops setup, AgentMail inbox `${AGENTMAIL_INBOX}` can receive WorkOS AgentCard sign-in codes.
 
 ## How to Run
 
@@ -137,7 +137,7 @@ hermes mcp list
 
 10. **Handle KYC blockers before wallet funding.**
    - If identity is incomplete, use `get_kyc_status` / `start_kyc` and follow `references/agentcard-kyc-troubleshooting.md`.
-   - **Mint face link on demand:** `get_kyc_status` then `start_kyc(terms_accepted=true)` → `verificationUrl` (`api.agentcard.sh/kyc/verify?token=...`, ~48h). Prefer this over reusing AgentMail or old transcript links. Confirm account with `whoami` (Dewey: typically `${AGENTMAIL_INBOX}`).
+   - **Mint face link on demand:** `get_kyc_status` then `start_kyc(terms_accepted=true)` → `verificationUrl` (`api.agentcard.sh/kyc/verify?token=...`, ~48h). Prefer this over reusing AgentMail or old transcript links. Confirm account with `whoami` (Feina ops: typically `${AGENTMAIL_INBOX}`).
    - If browser upload links expire immediately but the user sent ID images in chat, prefer direct document upload using the upload token rather than repeatedly giving failing links.
    - Do not save SSN, raw ID values, or document numbers in memory or support messages.
 

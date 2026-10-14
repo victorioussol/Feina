@@ -100,7 +100,7 @@ Canonical item: `op://Feina/Hermes Agent Secrets/<FIELD>` (per-client vault name
 | `LATITUDE_API_KEY` | same | Optional until Feina enables tracing |
 | `LATITUDE_PROJECT` | same | e.g. `feina-vince` |
 
-**Never map on client computers:** `ORGO_API_KEY` or any other client's keys.
+**Never map on client computers:** Orgo fleet-control API keys or any other client's secrets.
 
 ## Composio vs Hermes secrets
 

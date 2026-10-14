@@ -10,14 +10,21 @@ OP_ENV="$HERMES_HOME/.op.env"
 VENV_PY=/usr/local/lib/hermes-agent/venv/bin/python
 PAIR_PY=/usr/local/bin/feina-stack-telegram-pair.py
 
+strip_orgo_env() {
+  local f="$1"
+  [ -f "$f" ] || return 0
+  grep -vE '^(ORGO_API_KEY|ORGO_DEFAULT_COMPUTER_ID)=' "$f" > "$f.norgo" 2>/dev/null || true
+  mv "$f.norgo" "$f"
+}
+
 usage() {
   cat <<'EOF'
-feina-onboard — non-interactive client setup
+feina-onboard — non-interactive client setup (MVP: ChatGPT / openai-codex only)
 
 Integration toggles:  feina enable|disable|list  (e.g. feina enable agentphone)
 
+  setup                    Walk through MVP onboarding steps (ChatGPT sign-in first)
   model-codex              Start ChatGPT (openai-codex) device login; prints URL + code
-  model-openrouter <key>   Set OPENROUTER_API_KEY and switch default provider
   telegram-qr [bot name]   Mint Telegram QR (headless); prints deep link + PNG path
   allow-user <telegram_id> Append a Telegram user id to TELEGRAM_ALLOWED_USERS
   composio <ck_...>        Set COMPOSIO_CONSUMER_KEY
@@ -25,6 +32,8 @@ Integration toggles:  feina enable|disable|list  (e.g. feina enable agentphone)
   latitude <key> <project> Set Latitude tracing (optional)
   op-token <ops_...>       Write 1Password service account token and enable map
   status                   Health check (gateway, Hermes version, MCPs, no ORGO keys)
+
+Alternate models (not MVP): use `feina enable openrouter` after adding keys via 1Password.
 
 Environment: FEINA_BOT_NAME overrides default bot display name for telegram-qr.
 EOF
@@ -37,34 +46,47 @@ append_env() {
   grep -vE "^${key}=" "$ENV_FILE" > "$ENV_FILE.tmp" 2>/dev/null || true
   mv "$ENV_FILE.tmp" "$ENV_FILE"
   printf '%s=%s\n' "$key" "$val" >> "$ENV_FILE"
+  strip_orgo_env "$ENV_FILE"
 }
 
 cmd="${1:-}"
 shift || true
 
 case "$cmd" in
+  setup)
+    cat <<'EOF'
+
+=== Feina client MVP setup ===
+
+Step 1 — ChatGPT model (required)
+  Run: feina-onboard model-codex
+  Sign in at chatgpt.com with the client's ChatGPT account (Feina-owned for the pilot).
+  Wait until: test -s /root/.hermes/auth.json && echo ready
+
+Step 2 — Telegram bot
+  Run: feina-onboard telegram-qr "Client Name · Feina"
+  Scan the QR with Feina's Telegram account; add the client with allow-user later.
+
+Step 3 — Keys (as needed)
+  feina-onboard composio <ck_...>
+  feina-onboard agentmail <am_...> [inbox]
+  feina-onboard op-token <ops_...>   # optional 1Password
+
+Step 4 — Verify
+  feina-onboard status
+
+Optional integrations (off by default): feina list  →  feina enable <name>
+
+EOF
+    ;;
   model-codex)
     LOG=/root/feina-codex-auth.log
     nohup hermes auth add openai-codex >"$LOG" 2>&1 &
     sleep 3
-    echo "=== openai-codex sign-in (use the client's ChatGPT account) ==="
+    echo "=== Step 1: ChatGPT sign-in (openai-codex) ==="
+    echo "Open chatgpt.com with the client's ChatGPT account and enter the device code below."
     tail -n 40 "$LOG" || true
     echo "Poll: test -s $HERMES_HOME/auth.json && echo ready"
-    ;;
-  model-openrouter)
-    KEY="${1:?OPENROUTER_API_KEY required}"
-    append_env OPENROUTER_API_KEY "$KEY"
-    python3 - <<'PY'
-import yaml, os
-p="/root/.hermes/config.yaml"
-with open(p) as f: c=yaml.safe_load(f)
-c.setdefault("model",{})["provider"]="openrouter"
-c["model"]["default"]="anthropic/claude-sonnet-4"
-with open(p,"w") as f: yaml.safe_dump(c,f,default_flow_style=False,sort_keys=False)
-os.chmod(p,0o600)
-print("model.provider=openrouter")
-PY
-    supervisorctl restart hermes-gateway 2>/dev/null || true
     ;;
   telegram-qr)
     [ -n "${1:-}" ] && export FEINA_BOT_NAME="$1"
@@ -122,11 +144,9 @@ PY
       echo "Gateway: not RUNNING under supervisor (may still be starting)"
     fi
     if [ -s "$HERMES_HOME/auth.json" ]; then
-      echo "Model auth: auth.json present (codex/oauth)"
-    elif grep -q '^OPENROUTER_API_KEY=' "$ENV_FILE" 2>/dev/null; then
-      echo "Model auth: OPENROUTER_API_KEY set"
+      echo "Model auth: auth.json present (openai-codex)"
     else
-      echo "Model auth: NOT READY (run model-codex or model-openrouter)"
+      echo "Model auth: NOT READY — run: feina-onboard model-codex"
     fi
     echo "MCP servers:"
     hermes mcp list 2>/dev/null || true
@@ -136,11 +156,13 @@ c=yaml.safe_load(open("/root/.hermes/config.yaml"))
 o=(c.get("mcp_servers") or {}).get("orgo") or {}
 print("orgo MCP enabled:", o.get("enabled", False), "(must be False on clients)")
 PY
+    strip_orgo_env "$ENV_FILE"
+    strip_orgo_env /root/.env
     ORGO_HITS=$(grep -rE '^ORGO_API_KEY=|^ORGO_DEFAULT_COMPUTER_ID=' "$HERMES_HOME/.env" /root/.env 2>/dev/null | wc -l || echo 0)
     if [ "$ORGO_HITS" -eq 0 ]; then
-      echo "ORGO_API_KEY: none found (good)"
+      echo "Orgo keys in .env: none (good)"
     else
-      echo "ORGO_API_KEY: FOUND $ORGO_HITS references (BAD — remove immediately)"
+      echo "Orgo keys in .env: FOUND (BAD)"
       exit 2
     fi
     ;;

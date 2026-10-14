@@ -14,7 +14,7 @@ Set up AgentMail as an API-first email inbox provider for agents, either directl
 
 Also covers **operational delivery failures**: outbound 403 bounce suppression (`send/block`) and how that differs from missing **inbound** OTP/notices.
 
-Also covers **Dewey outbound send policy** (always CC Nick, approval rules) and dual-channel notify (email + Slack) when the user asks to alert someone.
+Covers **Feina outbound policy**: draft every email in chat (to, subject, body) and send only after the client's explicit yes (see `SOUL.md`).
 
 ## When to Use
 
@@ -24,17 +24,15 @@ Also covers **Dewey outbound send policy** (always CC Nick, approval rules) and 
 - You need to add AgentMail as a hosted MCP connector for Hermes or another MCP client.
 - Outbound send fails with `MessageRejectedError` / 403 / `Recipient(s) blocked … bounced` (auto send-block suppression).
 - User asks why AgentMail bounced, how to unblock a recipient, or whether a missing inbound OTP is the same bounce issue.
-- User asks to **send email**, **CC Nick**, or dual-notify (email + Slack DM) about a ship/publish/heads-up.
+- User asks to **send email** to a customer, supplier, or team member.
 
-**Nick personal inbox triage — DUAL-SOURCE (+ Granola when asked) mandatory.** If the user asks “what emails have I missed / should I get back to / catch up,” you MUST check BOTH mail sources, and Granola when they also mention meetings/follow-ups:
+## Outbound email (Feina — mandatory)
 
-1. **Composio Gmail FIRST** — `${OWNER_EMAIL}` via Composio `gmail` toolkit (`COMPOSIO_SEARCH_TOOLS` → `GMAIL_LIST_THREADS` / `GMAIL_FETCH_EMAILS` paginated with `page_token` + hydrate in parallel via `COMPOSIO_REMOTE_WORKBENCH` ThreadPoolExecutor). Primary human mail. 200+ unread is normal; filter noisy senders (openrouter receipts, Mia watchdog alerts, Latitude, otter/fireflies/riverside, xfinity, slacks, linkedin). See `references/personal-gmail-triage-via-composio.md`.
-2. **AgentMail SECOND** — the client's dedicated `AGENTMAIL_INBOX` via MCP `list_threads`. OTP noise is common; surface real human leads and vendor support. AgentMail alone is rarely sufficient for all comms.
-3. **Granola MCP (when meetings / follow-ups mentioned)** — Composio toolkit `granola_mcp`. Prefer `GRANOLA_MCP_QUERY_GRANOLA_MEETINGS` for Nick-owned action items. List ranges **serially** (`this_week` / `last_week` / `last_30_days`) — parallel triple list often returns `Rate limit exceeded`.
-
-User correction “why not check composio” = first-class skill signal. Next session must start with both mail sources.
-
-**One-by-one action loop (Nick preference):** When Nick says work through items “one by one,” do **not** batch-send after the triage board. For each item: (1) state what is known, (2) **ask questions** before proposing (slot, agenda, reply-only vs reply+calendar), (3) propose exact reply and/or calendar change, (4) execute only on explicit go, confirm ids, then advance.
+1. **Draft in Telegram first:** show **To/Cc/Bcc**, **subject**, and full **body**.
+2. Wait for an **explicit yes** from the client before calling `send_message` or Composio Gmail send tools.
+3. Use `${AGENTMAIL_INBOX}` as the default from-address unless the client specifies another connected inbox.
+4. Do **not** auto-CC Feina staff or third parties unless the client included them in the approved draft.
+5. For inbox triage: check Composio Gmail (if connected) and `${AGENTMAIL_INBOX}`; summarize drafts; never send without approval.
 
 ## Prerequisites
 
@@ -127,24 +125,19 @@ Use the `terminal` tool for all shell commands. Use `search_files` or `read_file
    ```
    Completion criterion: list succeeds and create returns an inbox identifier or email address.
 
-6. **Send only with explicit recipient approval** (user-directed “send email to X” counts). Prefer both `text` and `html`. **Always include `cc: ["${OWNER_EMAIL}"]`** on every real outbound send so Nick can see it (standing Dewey rule). Default from-inbox for Dewey: `${AGENTMAIL_INBOX}` (`inboxId` is that email string on the MCP `send_message` tool).
+6. **Send only after explicit client approval** (see Outbound email above). Prefer both `text` and `html`. MCP example shape:
 
-   MCP example shape:
    ```json
    {
      "inboxId": "${AGENTMAIL_INBOX}",
      "to": ["recipient@example.com"],
-     "cc": ["${OWNER_EMAIL}"],
      "subject": "...",
      "text": "...",
      "html": "..."
    }
    ```
-   CLI (if installed): pass whatever CC flag the current CLI exposes; if none, send via MCP/API with `cc`.
 
-   If a send already left without Nick on CC, do **not** re-spam the primary recipient. Send Nick a separate **copy** (to `${OWNER_EMAIL}` only) with the same body and a subject like `Copy: <original subject>`.
-
-   Completion criterion: send returns `messageId`/`threadId` and Nick is on the thread (CC or explicit copy).
+   Completion criterion: send returns `messageId`/`threadId` and matches the approved draft.
 
 7. **Add AgentMail hosted MCP when the user wants MCP access.** First inspect the active Hermes syntax:
    ```bash
@@ -216,7 +209,7 @@ AgentMail is **refusing the send before mail leaves**. A previous delivery attem
 curl -sS -H "Authorization: Bearer $AGENTMAIL_API_KEY" \
   "https://api.agentmail.to/v0/lists/send/block/user@domain.com"
 # 200 + reason "bounced" or "Unsubscribed via List-Unsubscribe" → suppressed; 404 → not blocked
-# If JSON has read_only:true, DELETE returns 409 — do not loop; fall back to Nick Gmail Composio
+# If JSON has read_only:true, DELETE returns 409 — do not loop; fall back to the client Gmail Composio
 # Known: opticalresourcesgroup@gmail.com (Mark/ORG) is read-only List-Unsubscribe; use ${OWNER_EMAIL} Gmail for Mark approval packs
 # 413 on send: compress attachments to email JPEG or Drive-link large packs
 
@@ -254,11 +247,7 @@ Full cheatsheet: `references/bounce-suppression-send-block.md`.
 - **Do not treat missing inbound fund/OTP mail as send-block.** If other vendor messages land, it is a product/gate issue.
 - **Send block is org-wide** across all inboxes until the entry is removed.
 - Do not mass-delete the entire send/block list; clear known-good addresses only.
-- Dewey policy: read/search/list + drafts OK; **explicit user approval before send** (a direct “send this to X” is approval).
-- **Always CC `${OWNER_EMAIL}`** on outbound AgentMail sends. Never omit because the message is “informal” or “internal.” Nick asked for visibility on every agent-sent email.
-- Do not double-email a primary recipient just to fix a missing CC; send Nick a one-off copy instead.
-- Dual-channel heads-up (email + Slack): see `references/outbound-cc-and-dual-notify.md`. Slack workspace for Orgo is via Composio (`SLACK_FIND_USERS` → `SLACK_OPEN_DM` → `SLACK_SEND_MESSAGE`). Work emails can differ from Slack profile emails (e.g. Tiger: vault `tiger@orgo.ai`, Slack profile may be personal Gmail; name search works when email lookup returns empty).
-- **Customer multi-touch marketing drips** (e.g. `org@agentmail.to` Jobber/Revo sequences): load `customer-outbound-campaigns`. Always-CC-Nick applies to **one-off / operator-style** sends, not every row of a 200+ drip — use campaign labels + Google Sheet tracking for bulk; still CC Nick when emailing Mark/Richard personally or sending approval links.
+- Feina policy: read/search/list + drafts OK; show the full draft in Telegram and send only after explicit client approval (`SOUL.md`).
 - Ground drip voice from **prior messages on that inbox** (`AGENT_MAIL_LIST_MESSAGES` / `GET_MESSAGE`) before writing new subjects.
 - Check custom-domain DNS status on the customer inbox before volume; PENDING domains degrade deliverability.
 
@@ -285,13 +274,9 @@ If the Composio search does not return AgentMail-specific tools, report direct A
 
 Bounce fix is verified when: `GET send/block/{email}` is 404 after DELETE, and a subsequent send returns a real `messageId`/`threadId`.
 
-Outbound policy is verified when every real send includes `cc` containing `${OWNER_EMAIL}` (or a deliberate Nick-only copy if fixing a missed CC).
+Outbound policy is verified when every real send matches a draft the client explicitly approved in chat.
 
 ## References
 
-- `references/bounce-suppression-send-block.md` — outbound 403 send/block diagnosis
 - `references/inbound-otp-vs-send-block.md` — do not conflate inbound OTP miss with send-block
-- `references/outbound-cc-and-dual-notify.md` — always CC `${OWNER_EMAIL}`; dual-channel email + Slack DM; Tiger lookup notes
-- `references/personal-gmail-triage-via-composio.md` — personal Gmail triage via Composio (${OWNER_EMAIL}), priority rubric, deliverable shape
-- `references/composio-gmail-bulk-triage.md` — bulk 200+ unread pattern, pagination, ThreadPoolExecutor hydration, noise denylist expansion (Jul 10 2026 session)
 

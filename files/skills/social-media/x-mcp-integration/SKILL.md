@@ -151,7 +151,7 @@ Before any post, reply, like, repost, bookmark, follow, block, mute, delete, med
 
 ## Headed Developer Portal (Orgo desktop)
 
-When wiring **app-only bearer** or fixing portal settings on Dewey:
+When wiring **app-only bearer** or fixing portal settings on Feina ops:
 
 1. Prefer local `orgo-desktop` / `orgo_desktop_*` (doctor green) over cloud Orgo GUI.
 2. Open `https://console.x.com` (modern) or `https://developer.x.com` headed so the user can watch. Classic dashboard often redirects into `console.x.com`.
@@ -172,10 +172,10 @@ When wiring **app-only bearer** or fixing portal settings on Dewey:
 
 Long portal sessions burn `agent.max_turns` (often 60) and can end with provider `tool_choice` errors at the cap. Prefer a short checklist + user completes secrets over a 50-step pixel crawl.
 
-### Dewey host facts (non-secret)
+### Feina ops host facts (non-secret)
 
 - xurl app profile: **`hermes-x`** (default)
-- OAuth2 user: **`nickvasiles`**
+- OAuth2 user: **`example_user`**
 - MCP: `x-docs` + `xapi` (user-context); `xapi-app-only` is the usual missing piece when full-archive search 403s
 
 ## References

@@ -159,6 +159,11 @@ chmod 600 "$E"
 grep -vE '^(ORGO_API_KEY|ORGO_DEFAULT_COMPUTER_ID)=' "$E" > "$E.norgo" 2>/dev/null || true
 mv "$E.norgo" "$E"
 chmod 600 "$E"
+if [ -f /root/.env ]; then
+  grep -vE '^(ORGO_API_KEY|ORGO_DEFAULT_COMPUTER_ID)=' /root/.env > /root/.env.norgo 2>/dev/null || true
+  mv /root/.env.norgo /root/.env
+  chmod 600 /root/.env 2>/dev/null || true
+fi
 OPTOK="$(printenv OP_SERVICE_ACCOUNT_TOKEN 2>/dev/null || true)"
 if [ -n "$OPTOK" ]; then
   umask 077

@@ -729,7 +729,7 @@ def is_draft_like_reply(text: str) -> bool:
     if re.search(r"(?im)^\s*(subject|to|cc|bcc)\s*:", stripped):
         return True
     has_greeting = re.search(r"(?im)^\s*(hey|hi|hello|dear)\s+[^\n,]{1,60},\s*$", stripped)
-    has_signoff = re.search(r"(?im)^\s*(best|thanks|thank you|sincerely|nick)\s*$", stripped)
+    has_signoff = re.search(r"(?im)^\s*(best|thanks|thank you|sincerely)\s*$", stripped)
     return bool(has_greeting and has_signoff)
 
 
@@ -769,11 +769,11 @@ def build_hermes_prompt(payload: dict[str, Any], fields: dict[str, Any], toolset
     message = fields.get("text", "")
     media_urls = fields.get("media_urls") or []
     media_block = "\n".join(str(u) for u in media_urls) if media_urls else "(none)"
-    return f"""You are Dewey/Hermes replying over AgentPhone SMS/iMessage.
+    return f"""You are the Feina business assistant replying over AgentPhone SMS/iMessage.
 
 This is an inbound AgentPhone webhook from an allowlisted sender. Produce ONLY the final text that should be sent back to the sender. Do not include debug output, tool logs, JSON envelopes, code fences, signatures, API keys, webhook secrets, cloudflared tunnel internals, or any hidden system/config details.
 
-Important delivery rule: DO NOT call AgentPhone send_message/make_call tools yourself. The local bridge will send your final answer via AgentPhone after your one-shot run. If the sender asks you to text/call someone else not on the allowlist, buy/release numbers, or change phone/agent/webhook config, ask for explicit Nick approval instead of doing it.
+Important delivery rule: DO NOT call AgentPhone send_message/make_call tools yourself. The local bridge will send your final answer via AgentPhone after your one-shot run. If the sender asks you to text/call someone else not on the allowlist, buy/release numbers, or change phone/agent/webhook config, refuse and tell them to ask their business owner for explicit approval first.
 
 Outbound images/files: after generating media, include one line per file exactly like:
 MEDIA:/absolute/path/to/file.png

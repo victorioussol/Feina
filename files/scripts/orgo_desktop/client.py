@@ -4,7 +4,7 @@ Auth: Bearer <vnc_password> (NOT ORGO_API_KEY).
 Base: http://127.0.0.1:8080 by default (ORGO_DESKTOP_API_URL override).
 
 Coordinate space: full desktop pixels as returned by /screenshot
-(typically 1280x720 on Dewey).
+(typically 1280x720 on standard templates).
 """
 
 from __future__ import annotations

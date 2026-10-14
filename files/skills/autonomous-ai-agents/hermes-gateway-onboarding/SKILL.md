@@ -70,7 +70,7 @@ Hermes includes a managed Telegram onboarding client in `hermes_cli.telegram_man
 
 Operational sequence:
 
-1. Create a pairing with bot name, e.g. `Dewey`.
+1. Create a pairing with bot name, e.g. `Feina ops`.
 2. Render the returned `qr_payload` as terminal QR and provide the fallback deep link.
 3. Start a poller that waits for the user to confirm bot creation in Telegram.
 4. When ready, save:
@@ -106,7 +106,7 @@ Keep a **Refresh QR** regenerator on the desktop for call desks; always show exp
 - A QR code alone does not configure Hermes. The process must also poll for the created bot token, write `.env`, and start/restart the gateway.
 - Managed pairings expire quickly (~5 min). Refresh the pairing immediately before the customer scans; never reuse an expired `pairing_id`.
 - “I set up the bot” ≠ Hermes configured. Always check token presence and gateway platform enablement.
-- Never reuse the operator/Dewey Telegram bot on a customer computer.
+- Never reuse the operator/Feina ops Telegram bot on a customer computer.
 - Telegram bot display name and username are different. Display name can be free text; username must be globally unique and end in `bot`.
 - Telegram group behavior depends on BotFather privacy mode. DMs are simpler; group bots may need privacy disabled or admin status.
 - Do not expose Telegram bot tokens in chat, logs, or config summaries.

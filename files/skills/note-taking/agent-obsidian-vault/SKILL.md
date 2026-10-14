@@ -129,7 +129,7 @@ attachments/
 
 7. Configure Hermes to find the vault when requested.
    - Run `hermes config env-path` through `terminal` to locate the environment file.
-   - For a staged V3 review, point Hermes at the staged vault path for testing only; do not repoint to `/root/Dewey-Vault` until production cutover has actually happened.
+   - For a staged V3 review, point Hermes at the staged vault path for testing only; do not repoint to `/root/Feina ops-Vault` until production cutover has actually happened.
    - For production after explicit cutover approval, repoint both variables to the final canonical vault path.
    - Use a secret-safe env edit that changes only these keys and does not print unrelated `.env` contents:
 
@@ -157,7 +157,7 @@ WIKI_PATH=/absolute/vault
    - Soft gate: `wiki/managed-customer-agents.md` then person note + `projects/<slug>/overview.md`.
    - For every named customer account create **all three**: `wiki/people/…`, project pack (`overview` + `tasks` + `ideas`), registry row.
    - Overview must include copy-paste Orgo workspace id, computer id, dashboard URL, messaging channel; never secrets/tokens.
-   - Evidence order: live Orgo IDs → VM probe → Granola → Slack Connect → Gmail. Full procedure: skill **`vault-managed-customer-agents`** (also `managed-hermes-on-orgo/references/customer-context-vaulting.md`).
+   - Evidence order: live Orgo IDs → VM probe → meeting notes → Slack Connect → Gmail. Full procedure: skill **`vault-managed-customer-agents`** (also `managed-hermes-on-orgo/references/customer-context-vaulting.md`).
    - Large fleets: flagship + fleet pattern, not one project per agency VM.
    - Same session: `active-projects`, `open-loops`, `people-directory`, `LOG`, optional `AI/sessions/…`, schema validator, git commit.
 

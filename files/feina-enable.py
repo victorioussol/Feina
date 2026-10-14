@@ -8,8 +8,8 @@ import sys
 import yaml
 
 CONFIG = "/root/.hermes/config.yaml"
+AGENTPHONE_FLAG = "/var/lib/orgo/feina-agentphone-enabled"
 
-# Never enable on client computers (full-account Orgo key risk).
 BLOCKED = frozenset(
     {
         "orgo",
@@ -17,29 +17,32 @@ BLOCKED = frozenset(
         "orgo_desktop",
         "orgo-desktop",
         "orgo-desktop-local",
+        "computer-use",
+        "computer_use",
     }
 )
 
-# CLI name -> (kind, config key)
 INTEGRATIONS = {
-    "agentphone": ("mcp", "agentphone"),
-    "agentcard": ("mcp", "agent-cards"),
-    "agent-cards": ("mcp", "agent-cards"),
-    "vidiq": ("mcp", "vidiq"),
-    "x-docs": ("mcp", "x-docs"),
-    "xdocs": ("mcp", "x-docs"),
-    "xapi": ("mcp", "xapi"),
-    "xapi-app-only": ("mcp", "xapi-app-only"),
-    "linear": ("mcp", "linear"),
-    "ideabrowser": ("mcp", "ideabrowser"),
-    "latitude": ("mcp", "latitude"),
-    "composio": ("mcp", "composio"),
-    "agentmail": ("mcp", "agentmail"),
-    "obsidian-vault": ("mcp", "obsidian-vault"),
-    "vault": ("mcp", "obsidian-vault"),
-    "spotify": ("plugin", "spotify"),
-    "xai": ("plugin", "xai"),
-    "honcho": ("memory", "honcho"),
+    "agentphone": ("mcp", "agentphone", "agentphone_bridge"),
+    "agentcard": ("mcp", "agent-cards", None),
+    "agent-cards": ("mcp", "agent-cards", None),
+    "vidiq": ("mcp", "vidiq", None),
+    "x-docs": ("mcp", "x-docs", None),
+    "xdocs": ("mcp", "x-docs", None),
+    "xapi": ("mcp", "xapi", None),
+    "xapi-app-only": ("mcp", "xapi-app-only", None),
+    "linear": ("mcp", "linear", None),
+    "ideabrowser": ("mcp", "ideabrowser", None),
+    "latitude": ("mcp", "latitude", None),
+    "composio": ("mcp", "composio", None),
+    "agentmail": ("mcp", "agentmail", None),
+    "obsidian-vault": ("mcp", "obsidian-vault", None),
+    "vault": ("mcp", "obsidian-vault", None),
+    "spotify": ("plugin", "spotify", "spotify_toolset"),
+    "xai": ("plugin", "xai", None),
+    "openrouter": ("plugin", "openrouter", "openrouter_family"),
+    "anthropic": ("plugin", "anthropic-provider", None),
+    "honcho": ("memory", "honcho", None),
 }
 
 
@@ -63,40 +66,60 @@ def set_mcp(cfg, name: str, on: bool):
     mcp[name]["enabled"] = on
 
 
-def set_plugin(cfg, name: str, on: bool):
+def set_plugin(cfg, name: str, on: bool, family: str | None = None):
     plugins = cfg.setdefault("plugins", {})
     enabled = list(plugins.get("enabled") or [])
     disabled = list(plugins.get("disabled") or [])
-    if on:
-        if name not in enabled:
-            enabled.append(name)
-        if name in disabled:
-            disabled.remove(name)
-        # xai ships as a small family
-        if name == "xai":
-            for extra in ("xai-provider", "web-xai"):
-                if extra not in enabled:
-                    enabled.append(extra)
-                if extra in disabled:
-                    disabled.remove(extra)
-    else:
-        if name in enabled:
-            enabled.remove(name)
-        if name not in disabled:
-            disabled.append(name)
-        if name == "xai":
-            for extra in ("xai-provider", "web-xai"):
-                if extra in enabled:
-                    enabled.remove(extra)
-                if extra not in disabled:
-                    disabled.append(extra)
+
+    def add(p):
+        if p not in enabled:
+            enabled.append(p)
+        if p in disabled:
+            disabled.remove(p)
+
+    def rem(p):
+        if p in enabled:
+            enabled.remove(p)
+        if p not in disabled:
+            disabled.append(p)
+
+    targets = [name]
+    if family == "openrouter_family":
+        targets = ["openrouter", "openrouter-provider"]
+    if name == "xai" or family == "xai":
+        targets = ["xai", "xai-provider", "web-xai"]
+
+    for p in targets:
+        (add if on else rem)(p)
     plugins["enabled"] = enabled
     plugins["disabled"] = disabled
+
+
+def set_spotify_toolset(cfg, on: bool):
+    for ch in ("cli", "telegram"):
+        tools = cfg.setdefault("platform_toolsets", {}).setdefault(ch, [])
+        if on and "spotify" not in tools:
+            tools.append("spotify")
+        if not on and "spotify" in tools:
+            tools[:] = [t for t in tools if t != "spotify"]
 
 
 def set_honcho(cfg, on: bool):
     mem = cfg.setdefault("memory", {})
     mem["provider"] = "honcho" if on else ""
+
+
+def agentphone_bridge(on: bool):
+    os.makedirs("/var/lib/orgo", exist_ok=True)
+    if on:
+        open(AGENTPHONE_FLAG, "w").close()
+        subprocess.run(["supervisorctl", "start", "agentphone-bridge"], check=False)
+    else:
+        try:
+            os.remove(AGENTPHONE_FLAG)
+        except OSError:
+            pass
+        subprocess.run(["supervisorctl", "stop", "agentphone-bridge"], check=False)
 
 
 def restart_gateway():
@@ -112,11 +135,17 @@ def cmd_list(cfg):
         print(f"  {name}: {flag}{block}")
     print("Plugins (selected):")
     en = set(cfg.get("plugins", {}).get("enabled") or [])
-    for name in ("spotify", "xai", "xai-provider", "web-xai", "orgo-desktop-local"):
-        if name in en:
-            print(f"  {name}: on")
-        else:
-            print(f"  {name}: off")
+    for name in (
+        "spotify",
+        "xai",
+        "openrouter",
+        "openrouter-provider",
+        "anthropic-provider",
+        "orgo-desktop-local",
+    ):
+        print(f"  {name}: {'on' if name in en else 'off'}")
+    ap = "on" if os.path.isfile(AGENTPHONE_FLAG) else "off"
+    print(f"agentphone-bridge service flag: {ap}")
     print(f"memory.provider: {cfg.get('memory', {}).get('provider') or '(empty)'}")
 
 
@@ -135,7 +164,7 @@ def main():
     key = args.name.lower().replace("_", "-")
     if key in BLOCKED:
         print(
-            f"Refusing to {args.action} {args.name}: Orgo control is not allowed on Feina client computers.",
+            f"Refusing to {args.action} {args.name}: not allowed on Feina client computers.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -144,15 +173,21 @@ def main():
         print(f"Unknown integration '{args.name}'. Known: {', '.join(sorted(INTEGRATIONS))}", file=sys.stderr)
         sys.exit(1)
 
-    kind, target = INTEGRATIONS[key]
+    kind, target, extra = INTEGRATIONS[key]
     cfg = load_cfg()
     on = args.action == "enable"
     if kind == "mcp":
         set_mcp(cfg, target, on)
+        if extra == "agentphone_bridge":
+            agentphone_bridge(on)
     elif kind == "plugin":
-        set_plugin(cfg, target, on)
+        set_plugin(cfg, target, on, extra)
     elif kind == "memory":
         set_honcho(cfg, on)
+    if extra == "spotify_toolset":
+        set_spotify_toolset(cfg, on)
+    elif kind == "plugin" and target == "spotify":
+        set_spotify_toolset(cfg, on)
     save_cfg(cfg)
     print(f"{target}: {'enabled' if on else 'disabled'}")
     restart_gateway()

@@ -1,8 +1,8 @@
 ---
 name: coding-agent-routing
-description: "Use when choosing Hermes vs Claude Code / Codex / Grok Build for coding work, wiring multi-CLI specialist setup, or diagnosing specialist auth/availability on Dewey."
+description: "Use when choosing Hermes vs Claude Code / Codex / Grok Build for coding work, wiring multi-CLI specialist setup, or diagnosing specialist auth/availability on Feina ops."
 version: 1.3.2
-author: Hermes Agent (Dewey)
+author: Hermes Agent (Feina ops)
 license: MIT
 platforms: [linux, macos, windows]
 metadata:
@@ -50,11 +50,11 @@ If Claude/Codex are not authenticated **or** return usage-limit errors, fall bac
 
 **Codex usage limits:** Auth can succeed while inference fails with a ChatGPT/Codex usage-limit error. Treat as "specialist unavailable"; fall back; do not retry-loop until the stated reset time or credits land.
 
-## Standing policy (this machine / Dewey)
+## Standing policy (this machine / Feina ops)
 
 Auth snapshot (verify with `claude auth status`, `codex login status`, `test -f ~/.grok/auth.json` if unsure):
 
-- Claude Code: Claude Max (`nickv@testkey.com`) — preferred careful multi-file specialist
+- Claude Code: Claude Max (`client@example.com`) — preferred careful multi-file specialist
 - Codex CLI: ChatGPT logged in — may hit usage limits; fall back if inference errors
 - Grok Build: SuperGrok OAuth (`~/.grok/auth.json`) — default fallback / SuperGrok coding / no-git
 
@@ -132,7 +132,7 @@ Prefer **Hermes** UI over specialist desktops for agent hosts. Full decision tab
 
 | Surface | When |
 |---------|------|
-| CLI / TUI / gateway | Default Dewey ops |
+| CLI / TUI / gateway | Default Feina ops ops |
 | `hermes dashboard --no-open --port 9119` | Visual config + embedded chat on Orgo (loopback; tunnel if remote) |
 | `hermes desktop` | Optional Electron if user lives in Orgo GUI |
 | Claude Desktop / Codex Desktop | Human preference only; **not** Hermes integration. Codex Desktop has no official Linux app. |

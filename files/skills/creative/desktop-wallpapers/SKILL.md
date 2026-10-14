@@ -114,4 +114,4 @@ See `scripts/procedural_neon_wallpaper.py` for a dependency-free 1920x1080 neon 
 - **User: "wallpapers disappeared / went black"** is almost always dead/missing `xfdesktop` (or dead Xvnc paint), not deleted files. Check `pgrep -x xfdesktop` and screenshot diversity before re-generating images.
 - Soft client relaunch can leave a **solid root color** that is nonblack but not the wallpaper. Require unique color samples, not just nonblack counts.
 - **Fleet multi-box uploads:** wait for the **exact** filename on that computer; delete other `wallpaper-*.png` so apply scripts do not pick a sibling box's art.
-- Nick prefers **company-logo + model-name** branding wallpapers for model-compare fleets when he asks for model-matched backgrounds (overrides generic "avoid logos" default).
+- the client prefers **company-logo + model-name** branding wallpapers for model-compare fleets when he asks for model-matched backgrounds (overrides generic "avoid logos" default).

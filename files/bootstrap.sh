@@ -101,6 +101,10 @@ if [ -f "$STAGE/hermes/config.yaml" ]; then
   [ -d "$STAGE/vault" ] && cp -rf "$STAGE/vault/." /root/Documents/HermesVault/
   grep -vE '^(ORGO_API_KEY|ORGO_DEFAULT_COMPUTER_ID)=' /root/.hermes/.env > /root/.hermes/.env.norgo 2>/dev/null || true
   mv /root/.hermes/.env.norgo /root/.hermes/.env
+  if [ -f /root/.env ]; then
+    grep -vE '^(ORGO_API_KEY|ORGO_DEFAULT_COMPUTER_ID)=' /root/.env > /root/.env.norgo 2>/dev/null || true
+    mv /root/.env.norgo /root/.env
+  fi
   chmod 600 /root/.hermes/config.yaml /root/.hermes/.env
 fi
 

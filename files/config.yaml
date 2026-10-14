@@ -4,12 +4,14 @@ model:
 providers:
   vercel-ai-gateway:
     name: Vercel AI Gateway
+    enabled: false
     base_url: https://ai-gateway.vercel.sh/v1
     key_env: AI_GATEWAY_API_KEY
     transport: chat_completions
     default_model: meta/muse-spark-1.1
   meta-model-api:
     name: Meta Model API
+    enabled: false
     api: https://api.meta.ai/v1
     key_env: MODEL_API_KEY
     transport: codex_responses
@@ -154,14 +156,12 @@ platform_toolsets:
   - browser
   - clarify
   - code_execution
-  - computer_use
   - cronjob
   - delegation
   - file
   - image_gen
   - kanban
   - memory
-  - orgo_desktop
   - session_search
   - skills
   - terminal
@@ -170,19 +170,16 @@ platform_toolsets:
   - vision
   - web
   - x_search
-  - spotify
   telegram:
   - browser
   - clarify
   - code_execution
-  - computer_use
   - cronjob
   - delegation
   - file
   - image_gen
   - kanban
   - memory
-  - orgo_desktop
   - session_search
   - skills
   - terminal
@@ -191,12 +188,10 @@ platform_toolsets:
   - vision
   - web
   - x_search
-  - spotify
   discord:
   - browser
   - clarify
   - code_execution
-  - computer_use
   - cronjob
   - delegation
   - discord
@@ -205,7 +200,6 @@ platform_toolsets:
   - image_gen
   - kanban
   - memory
-  - orgo_desktop
   - session_search
   - skills
   - terminal
@@ -214,19 +208,16 @@ platform_toolsets:
   - vision
   - web
   - x_search
-  - spotify
   whatsapp:
   - browser
   - clarify
   - code_execution
-  - computer_use
   - cronjob
   - delegation
   - file
   - image_gen
   - kanban
   - memory
-  - orgo_desktop
   - session_search
   - skills
   - terminal
@@ -235,19 +226,16 @@ platform_toolsets:
   - vision
   - web
   - x_search
-  - spotify
   slack:
   - browser
   - clarify
   - code_execution
-  - computer_use
   - cronjob
   - delegation
   - file
   - image_gen
   - kanban
   - memory
-  - orgo_desktop
   - session_search
   - skills
   - terminal
@@ -256,19 +244,16 @@ platform_toolsets:
   - vision
   - web
   - x_search
-  - spotify
   signal:
   - browser
   - clarify
   - code_execution
-  - computer_use
   - cronjob
   - delegation
   - file
   - image_gen
   - kanban
   - memory
-  - orgo_desktop
   - session_search
   - skills
   - terminal
@@ -277,37 +262,31 @@ platform_toolsets:
   - vision
   - web
   - x_search
-  - spotify
   homeassistant:
   - hermes-homeassistant
-  - spotify
   qqbot:
   - hermes-qqbot
-  - spotify
   yuanbao:
   - hermes-yuanbao
-  - spotify
   teams:
   - hermes-teams
-  - spotify
   google_chat:
   - hermes-google_chat
-  - spotify
 plugins:
   enabled:
-  - anthropic-provider
   - browser-browser-use
   - browser-firecrawl
   - latitude
   - openai
   - openai-codex
   - openai-codex-provider
-  - openrouter
-  - openrouter-provider
   - web-exa
   - web/firecrawl
   disabled:
+  - anthropic-provider
   - novita-provider
+  - openrouter
+  - openrouter-provider
   - orgo-desktop-local
   - spotify
   - web-xai
@@ -329,12 +308,8 @@ mcp_servers:
     headers:
       Authorization: Bearer ${LATITUDE_API_KEY}
   orgo:
-    command: npx
-    args:
-    - -y
-    - github:nickvasilescu/orgo-mcp
     enabled: false
-    comment: 'Feina: never enable on client computers; Orgo API keys belong on Feina ops only.'
+    comment: 'Feina client computers: Orgo MCP must remain disabled. Use Feina ops for fleet control.'
   composio:
     url: https://connect.composio.dev/mcp
     enabled: true

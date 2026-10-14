@@ -1,7 +1,7 @@
 # ==========================================================================
-# Nick's Stack — AgentPhone webhook bridge tuning (NON-SECRET defaults)
+# feina-stack — AgentPhone webhook bridge tuning (NON-SECRET defaults)
 # ==========================================================================
-# Byte-derived from the working Dewey VM, with the identity fields blanked.
+# Non-secret defaults for the supervised bridge (identity fields blanked).
 # The bridge itself reads secrets (AGENTPHONE_API_KEY, AGENTPHONE_AGENT_ID,
 # AGENTPHONE_NUMBER_ID) from ~/.hermes/.env — never from this file.
 #
@@ -19,7 +19,7 @@ AGENTPHONE_HERMES_TOOLSETS=web,vision
 AGENTPHONE_FULL_HERMES_TOOLSETS=all
 AGENTPHONE_HERMES_MAX_TURNS=90
 
-# --- conversational polish (Dewey-proven values) ---------------------------
+# --- conversational polish -------------------------------------------------
 AGENTPHONE_ACK_ENABLED=1
 AGENTPHONE_ACK_MODE=smart
 AGENTPHONE_ACK_DELAY_SECONDS=1.25
