@@ -124,7 +124,8 @@ set -a; . ~/.hermes/.env; set +a
 python3 - <<'PY' | op item create --vault Feina ops host - --format json > /tmp/hermes_1p_item.json
 import json
 from pathlib import Path
-keys = ['LATITUDE_API_KEY','ORGO_API_KEY','TELEGRAM_BOT_TOKEN','AGENTMAIL_API_KEY','AGENTPHONE_API_KEY']
+# Client VMs: do not store ORGO_API_KEY (ops-only). Include HONCHO_API_KEY when using Honcho memory.
+keys = ['LATITUDE_API_KEY','HONCHO_API_KEY','TELEGRAM_BOT_TOKEN','AGENTMAIL_API_KEY','AGENTPHONE_API_KEY']
 vals = {}
 for line in Path.home().joinpath('.hermes/.env').read_text(errors='ignore').splitlines():
     if '=' in line and not line.lstrip().startswith('#'):
@@ -151,7 +152,7 @@ PY
 Then map and verify each field:
 
 ```bash
-for k in LATITUDE_API_KEY ORGO_API_KEY TELEGRAM_BOT_TOKEN AGENTMAIL_API_KEY AGENTPHONE_API_KEY; do
+for k in LATITUDE_API_KEY HONCHO_API_KEY TELEGRAM_BOT_TOKEN AGENTMAIL_API_KEY AGENTPHONE_API_KEY; do
   ref="op://Hermes/Hermes Agent Secrets/${k}"
   op read "$ref" >/dev/null
   hermes secrets 1password set "$k" "$ref"
@@ -171,17 +172,19 @@ op://Vault Name/Item Name/Field Name
 ```
 
 ```bash
-hermes secrets 1password set ORGO_API_KEY 'op://Automation/Hermes Agent/ORGO_API_KEY'
+hermes secrets 1password set HONCHO_API_KEY 'op://Automation/Hermes Agent/HONCHO_API_KEY'
 hermes secrets 1password set AGENTMAIL_API_KEY 'op://Automation/Hermes Agent/AGENTMAIL_API_KEY'
 hermes secrets 1password set AGENTPHONE_API_KEY 'op://Automation/Hermes Agent/AGENTPHONE_API_KEY'
 hermes secrets 1password set LATITUDE_API_KEY 'op://Automation/Hermes Agent/LATITUDE_API_KEY'
 hermes secrets 1password set TELEGRAM_BOT_TOKEN 'op://Automation/Hermes Agent/TELEGRAM_BOT_TOKEN'
 ```
 
+**Ops-only (Feina launch machine, not client VMs):** account-wide `ORGO_API_KEY` belongs in ops env / ops 1Password — never map it into client Hermes `secrets.onepassword.env`.
+
 Verify before removing local `.env` copies:
 
 ```bash
-op read 'op://Automation/Hermes Agent/ORGO_API_KEY'
+op read 'op://Automation/Hermes Agent/HONCHO_API_KEY'
 hermes secrets 1password sync
 hermes secrets 1password status
 ```

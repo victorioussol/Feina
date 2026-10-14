@@ -79,7 +79,14 @@ python3 ops/feina_honcho.py push-config --slug <slug> --computer-id <computer_id
 
 This writes `~/.hermes/honcho.json` (workspace + peers) and `HONCHO_API_KEY` / `HONCHO_WORKSPACE_ID` on the VM.
 
-**Offboard:** `ops/offboard-client.sh <computer_id> --slug <slug> --honcho-export /tmp/honcho-meta.json --honcho-teardown` deletes sessions + workspace (async). Revoke the client key in the [Honcho dashboard](https://app.honcho.dev/api-keys) if needed.
+**Offboard:** export client Honcho memory first, then teardown (required unless `--honcho-force`):
+
+```bash
+ops/offboard-client.sh <computer_id> --slug <slug> \
+  --honcho-export /tmp/honcho-<slug>-memory.json --honcho-teardown
+```
+
+`feina_honcho.py teardown` writes a full JSON archive (peers, sessions, messages, conclusions, context/representation) with **no** `client_key` or secrets, then deletes the workspace. Revoke the client key in the [Honcho dashboard](https://app.honcho.dev/api-keys) if needed.
 
 **Limitation:** Workspace-scoped keys cannot access other workspaces; Feina's **admin** key must remain on ops only. Finer peer/session-scoped keys are possible via the same API if you need tighter write boundaries later.
 

@@ -11,8 +11,11 @@ export PATH=/usr/local/bin:/root/.local/bin:/root/.hermes/bin:/usr/bin:/bin:/usr
 until [ -f "$HERMES_HOME/config.yaml" ] && [ -s "$HERMES_HOME/auth.json" ]; do sleep 5; done
 
 set -a
+# shellcheck disable=SC1091
 [ -f /root/.env ] && . /root/.env
+# shellcheck disable=SC1091
 [ -f "$HERMES_HOME/.env" ] && . "$HERMES_HOME/.env"
+# shellcheck disable=SC1091
 [ -f "$HERMES_HOME/.op.env" ] && . "$HERMES_HOME/.op.env"
 set +a
 

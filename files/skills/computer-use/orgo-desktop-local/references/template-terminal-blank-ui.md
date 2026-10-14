@@ -175,4 +175,4 @@ hermes plugins enable orgo-desktop-local --no-allow-tool-override
 - `references/e2e-template-validation.md`
 - `orgo-cloud-computers` → `references/template-metal-authoring.md`
 - https://github.com/victorioussol/agentmail-agent
-- https://github.com/victorioussol/nicks-stack
+- https://github.com/nickvasilescu/nicks-stack

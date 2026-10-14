@@ -166,7 +166,7 @@ Optional: launch one computer from `template_ref` and confirm package validate /
 ## References
 
 - Package gold: `/root/Desktop/orgo-hermes-desktop-local/` (`build_template.py`, `SUCCESS_CRITERIA.md`)
-- GitHub patterns: `victorioussol/agentmail-agent`, `victorioussol/nicks-stack`, `victorioussol/orgo-hermes-desktop-local`
+- GitHub patterns: `victorioussol/agentmail-agent`, `nickvasilescu/nicks-stack` (upstream MIT stack), `victorioussol/Feina` (Feina fork), `victorioussol/orgo-hermes-desktop-local`
 - Schema: https://docs.orgo.ai/guides/templates/schema
 - Metal notes: `orgo-cloud-computers` → `references/template-metal-authoring.md`
 - Helper: `scripts/orgo_template_ops.py`

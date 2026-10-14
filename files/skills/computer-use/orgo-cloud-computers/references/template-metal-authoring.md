@@ -7,7 +7,7 @@ Lessons through `default/hermes-orgo-desktop-local@0.3.4` (2026-07).
 | Repo / template | Why |
 |-----------------|-----|
 | **[victorioussol/agentmail-agent](https://github.com/victorioussol/agentmail-agent)** / `default/agentmail-agent@0.2.4` | Best Hermes-on-Orgo product template: single `hermes` terminal **no run**, `apps[].install`, gateway waits for `auth.json`, lean first_boot, on_resume secret bridge |
-| **[victorioussol/nicks-stack](https://github.com/victorioussol/nicks-stack)** | Same builder REST flow + staging pattern |
+| **[nickvasilescu/nicks-stack](https://github.com/nickvasilescu/nicks-stack)** | Upstream MIT stack — same builder REST flow + staging pattern |
 | Package | `/root/Desktop/orgo-hermes-desktop-local` → `build_template.py` |
 
 Do not invent multi-tab bootstrap/validate terminals. Copy agentmail shape.
@@ -132,4 +132,4 @@ On the VM after doctor green: local Desktop API first. Operator outside uses clo
 - `orgo-desktop-local` → `references/e2e-template-validation.md`, `template-terminal-blank-ui.md`, `playground-401-diagnostics.md`
 - https://docs.orgo.ai/guides/templates/schema#terminal
 - https://github.com/victorioussol/agentmail-agent
-- https://github.com/victorioussol/nicks-stack
+- https://github.com/nickvasilescu/nicks-stack

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Feina ops: per-client Honcho workspace isolation (Honcho v3 API).
 
-Uses FEINA_HONCHO_ADMIN_KEY or HONCHO_ADMIN_API_KEY (admin / account key on ops only).
+Uses FEINA_HONCHO_ADMIN_KEY (admin / account key on ops only).
 Workspace = hard isolation boundary (one workspace per client: feina-<slug>).
 Mints workspace-scoped API keys via POST /v3/keys?workspace_id=... so client VMs
 cannot read other clients' memory (Honcho docs: authentication at workspace level).
@@ -19,17 +19,23 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 DEFAULT_BASE = os.environ.get("HONCHO_BASE_URL", "https://api.honcho.dev").rstrip("/")
 STATE_DIR = Path(os.environ.get("FEINA_HONCHO_STATE_DIR", os.path.expanduser("~/.feina/honcho-clients")))
+SECRET_FIELD_RE = re.compile(
+    r"(api[_-]?key|client[_-]?key|secret|token|password|authorization|bearer)$",
+    re.I,
+)
+EXPORT_VERSION = 1
 
 
 def admin_key() -> str:
-    for name in ("FEINA_HONCHO_ADMIN_KEY", "HONCHO_ADMIN_API_KEY", "HONCHO_API_KEY"):
-        v = os.environ.get(name, "").strip()
-        if v:
-            return v
+    v = os.environ.get("FEINA_HONCHO_ADMIN_KEY", "").strip()
+    if v:
+        return v
     raise SystemExit(
         "Set FEINA_HONCHO_ADMIN_KEY (Honcho admin key) on the Feina ops machine."
     )
@@ -44,6 +50,11 @@ def slug_to_workspace(slug: str) -> str:
     if len(wid) > 512:
         raise SystemExit("workspace id too long")
     return wid
+
+
+def ws_path(workspace_id: str, suffix: str) -> str:
+    base = f"/v3/workspaces/{urllib.parse.quote(workspace_id, safe='')}"
+    return f"{base}{suffix}"
 
 
 def request(
@@ -78,6 +89,118 @@ def request(
         except json.JSONDecodeError:
             payload = {"error": raw}
         return exc.code, payload
+
+
+def redact_secrets(obj: Any) -> Any:
+    if isinstance(obj, dict):
+        out: dict[str, Any] = {}
+        for k, v in obj.items():
+            if SECRET_FIELD_RE.search(str(k)) or k in ("client_key", "provision_state"):
+                out[k] = "[REDACTED]"
+            else:
+                out[k] = redact_secrets(v)
+        return out
+    if isinstance(obj, list):
+        return [redact_secrets(x) for x in obj]
+    return obj
+
+
+def list_items(
+    token: str,
+    workspace_id: str,
+    resource: str,
+    page_size: int = 100,
+) -> list[dict]:
+    """Paginate Honcho v3 list endpoints (POST .../{resource}/list)."""
+    items: list[dict] = []
+    page = 1
+    while True:
+        status, data = request(
+            "POST",
+            ws_path(workspace_id, f"/{resource}/list"),
+            token,
+            body={"filters": {}, "page": page, "size": page_size},
+        )
+        if status != 200 or not isinstance(data, dict):
+            break
+        batch = data.get("items") or data.get(resource) or []
+        if not isinstance(batch, list):
+            break
+        for row in batch:
+            if isinstance(row, dict):
+                items.append(row)
+        total_pages = data.get("pages") or data.get("total_pages")
+        if total_pages is not None and page >= int(total_pages):
+            break
+        if len(batch) < page_size:
+            break
+        page += 1
+        if page > 500:
+            break
+    return items
+
+
+def build_memory_export(token: str, workspace_id: str, slug: str) -> dict:
+    peers = list_items(token, workspace_id, "peers")
+    sessions = list_items(token, workspace_id, "sessions")
+    messages = list_items(token, workspace_id, "messages")
+    conclusions = list_items(token, workspace_id, "conclusions")
+
+    peer_context: list[dict] = []
+    peer_representations: list[dict] = []
+    for peer in peers:
+        pid = peer.get("id")
+        if not pid:
+            continue
+        pid_q = urllib.parse.quote(str(pid), safe="")
+        st, ctx = request("GET", ws_path(workspace_id, f"/peers/{pid_q}/context"), token)
+        if st == 200:
+            peer_context.append({"peer_id": pid, "context": ctx})
+        st, rep = request(
+            "POST",
+            ws_path(workspace_id, f"/peers/{pid_q}/representation"),
+            token,
+            body={},
+        )
+        if st == 200:
+            peer_representations.append({"peer_id": pid, "representation": rep})
+
+    session_context: list[dict] = []
+    for sess in sessions:
+        sid = sess.get("id")
+        if not sid:
+            continue
+        sid_q = urllib.parse.quote(str(sid), safe="")
+        st, ctx = request("GET", ws_path(workspace_id, f"/sessions/{sid_q}/context"), token)
+        if st == 200:
+            session_context.append({"session_id": sid, "context": ctx})
+
+    archive = {
+        "feina_export_version": EXPORT_VERSION,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "workspace_id": workspace_id,
+        "slug": slug,
+        "honcho_base_url": DEFAULT_BASE,
+        "peers": peers,
+        "sessions": sessions,
+        "messages": messages,
+        "conclusions": conclusions,
+        "peer_context": peer_context,
+        "peer_representations": peer_representations,
+        "session_context": session_context,
+    }
+    return redact_secrets(archive)
+
+
+def write_export(path: str, archive: dict) -> None:
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(archive, indent=2, ensure_ascii=False) + "\n"
+    out.write_text(text, encoding="utf-8")
+    try:
+        os.chmod(out, 0o600)
+    except OSError:
+        pass
 
 
 def get_or_create_workspace(token: str, workspace_id: str, slug: str) -> dict:
@@ -170,20 +293,13 @@ def cmd_provision(args: argparse.Namespace) -> int:
     return 0
 
 
-def list_sessions(token: str, workspace_id: str) -> list[str]:
-    status, data = request(
-        "POST",
-        f"/v3/workspaces/{urllib.parse.quote(workspace_id, safe='')}/sessions/list",
-        token,
-        body={"filters": {}, "page": 1, "size": 100},
-    )
-    if status != 200 or not isinstance(data, dict):
-        return []
-    ids: list[str] = []
-    for row in data.get("items") or data.get("sessions") or []:
-        if isinstance(row, dict) and row.get("id"):
-            ids.append(str(row["id"]))
-    return ids
+def cmd_export(args: argparse.Namespace) -> int:
+    token = admin_key()
+    workspace_id = slug_to_workspace(args.slug)
+    archive = build_memory_export(token, workspace_id, args.slug)
+    write_export(args.out, archive)
+    print(f"Wrote Honcho memory export to {args.out} (no secrets).")
+    return 0
 
 
 def cmd_teardown(args: argparse.Namespace) -> int:
@@ -191,38 +307,41 @@ def cmd_teardown(args: argparse.Namespace) -> int:
     workspace_id = slug_to_workspace(args.slug)
     sp = state_path(workspace_id)
 
-    export = {
-        "workspace_id": workspace_id,
-        "slug": args.slug,
-        "action": "teardown",
-    }
-    if sp.is_file():
-        try:
-            export["provision_state"] = json.loads(sp.read_text())
-        except (OSError, json.JSONDecodeError):
-            pass
-
-    if args.export:
-        Path(args.export).write_text(json.dumps(export, indent=2) + "\n")
-        print(f"Wrote export metadata to {args.export} (no message bodies).")
-        if args.dry_run:
-            return 0
-
     if args.dry_run:
-        print(f"dry-run: would delete sessions + workspace {workspace_id}")
+        print(f"dry-run: would export (if --export) and delete workspace {workspace_id}")
         return 0
 
-    for sid in list_sessions(token, workspace_id):
-        request(
-            "DELETE",
-            f"/v3/workspaces/{urllib.parse.quote(workspace_id, safe='')}/sessions/{urllib.parse.quote(sid, safe='')}",
-            token,
-        )
-    status, data = request(
-        "DELETE",
-        f"/v3/workspaces/{urllib.parse.quote(workspace_id, safe='')}",
-        token,
-    )
+    export_path = (args.export or "").strip()
+    if not args.force:
+        if not export_path:
+            print(
+                "Refusing teardown: pass --export FILE (full memory archive) or --force to skip export.",
+                file=sys.stderr,
+            )
+            return 1
+        try:
+            archive = build_memory_export(token, workspace_id, args.slug)
+            write_export(export_path, archive)
+            print(f"Honcho memory export OK → {export_path}")
+        except SystemExit:
+            raise
+        except Exception as exc:
+            print(f"Honcho export failed: {exc}", file=sys.stderr)
+            return 1
+    elif export_path:
+        try:
+            archive = build_memory_export(token, workspace_id, args.slug)
+            write_export(export_path, archive)
+            print(f"Honcho memory export OK → {export_path}")
+        except Exception as exc:
+            print(f"WARN: export failed ({exc}); continuing due to --force", file=sys.stderr)
+
+    for row in list_items(token, workspace_id, "sessions"):
+        sid = row.get("id")
+        if not sid:
+            continue
+        request("DELETE", ws_path(workspace_id, f"/sessions/{urllib.parse.quote(str(sid), safe='')}"), token)
+    status, data = request("DELETE", ws_path(workspace_id, ""), token)
     if status not in (200, 202, 204, 404):
         print(f"workspace delete returned {status}: {data}", file=sys.stderr)
         return 1
@@ -292,9 +411,15 @@ def main() -> int:
     p.add_argument("--remint-key", action="store_true", help="Mint a new client key even if state exists")
     p.set_defaults(func=cmd_provision)
 
-    t = sub.add_parser("teardown", help="Export metadata and delete Honcho workspace")
+    e = sub.add_parser("export", help="Export client Honcho memory to JSON (no secrets)")
+    e.add_argument("--slug", required=True)
+    e.add_argument("--out", required=True, metavar="FILE")
+    e.set_defaults(func=cmd_export)
+
+    t = sub.add_parser("teardown", help="Export memory (unless --force) and delete Honcho workspace")
     t.add_argument("--slug", required=True)
-    t.add_argument("--export", metavar="FILE", help="Write JSON export path")
+    t.add_argument("--export", metavar="FILE", help="Write JSON memory archive before delete")
+    t.add_argument("--force", action="store_true", help="Delete workspace without exporting")
     t.add_argument("--dry-run", action="store_true")
     t.add_argument("--keep-state", action="store_true")
     t.set_defaults(func=cmd_teardown)
