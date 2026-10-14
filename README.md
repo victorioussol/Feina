@@ -104,9 +104,9 @@ ops/offboard-client.sh <computer_id> --slug <slug> \
   --honcho-export /tmp/honcho-<slug>-memory.json --honcho-teardown
 ```
 
-`feina_honcho.py teardown` exports session-scoped messages, revokes the workspace key via the keys API (ids logged under `~/.feina/clients/<slug>/revoked_keys.jsonl`), deletes sessions/workspace (polls async delete), with **no** secrets in the archive.
+`feina_honcho.py teardown` exports session-scoped messages, deletes sessions/workspace, and polls `POST /v3/workspaces/list` until the workspace id is gone (async `DELETE` returns 202). Local `honcho.json` is removed only after that confirmation. **No** secrets in the archive.
 
-**Limitation:** Workspace-scoped keys cannot access other workspaces; Feina's **admin** key must remain on ops only. Finer peer/session-scoped keys are possible via the same API if you need tighter write boundaries later.
+**Limitations:** Honcho Cloud does not expose workspace `GET` or programmatic key revoke/list/delete (405) — workspace presence is checked via `workspaces/list` only. After teardown, **revoke the scoped client key manually** in [Honcho → API Keys](https://app.honcho.dev/api-keys). Feina's **admin** key must remain on ops only.
 
 Then on the VM (pre-setup):
 

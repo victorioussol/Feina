@@ -35,6 +35,10 @@ SECRET_FIELD_RE = re.compile(
 EXPORT_VERSION = 2
 WORKSPACE_DELETE_TIMEOUT_S = int(os.environ.get("FEINA_HONCHO_WORKSPACE_DELETE_TIMEOUT", "120"))
 WORKSPACE_DELETE_POLL_S = 5
+SCOPED_KEY_REVOKE_NOTICE = (
+    "Scoped key cannot be revoked via API; revoke/rotate in the Honcho dashboard "
+    "(app.honcho.dev -> API Keys) if available."
+)
 
 
 class HonchoError(Exception):
@@ -285,23 +289,14 @@ def get_or_create_workspace(token: str, workspace_id: str, slug: str) -> dict:
     return data if isinstance(data, dict) else {"id": workspace_id}
 
 
-def parse_mint_key_response(data: dict) -> tuple[str, str | None]:
-    secret = None
+def parse_mint_key_response(data: dict) -> str:
     for field in ("key", "api_key", "token", "secret"):
         if data.get(field):
-            secret = str(data[field])
-            break
-    if not secret:
-        raise SystemExit(f"Honcho create key: unexpected response shape (store key manually): {data!r}")
-    key_id = None
-    for field in ("id", "key_id", "api_key_id"):
-        if data.get(field):
-            key_id = str(data[field])
-            break
-    return secret, key_id
+            return str(data[field])
+    raise SystemExit(f"Honcho create key: unexpected response shape (store key manually): {data!r}")
 
 
-def mint_workspace_key(token: str, workspace_id: str) -> tuple[str, str | None]:
+def mint_workspace_key(token: str, workspace_id: str) -> str:
     status, data = request(
         "POST",
         "/v3/keys",
@@ -343,81 +338,17 @@ def state_path_for_slug(slug: str) -> Path:
     return new_path
 
 
-def revoked_keys_log(slug: str) -> Path:
-    client_dir, _ = _import_launch_state()
-    return client_dir(slug) / "revoked_keys.jsonl"
-
-
-def append_revoked_keys(slug: str, key_ids: list[str]) -> None:
-    if not key_ids:
-        return
-    log = revoked_keys_log(slug)
-    entry = {
-        "revoked_at": datetime.now(timezone.utc).isoformat(),
-        "slug": slug,
-        "key_ids": key_ids,
-    }
-    with log.open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps(entry) + "\n")
-    try:
-        os.chmod(log, 0o600)
-    except OSError:
-        pass
-
-
-def revoke_key_id(token: str, key_id: str) -> None:
-    kid = urllib.parse.quote(key_id, safe="")
-    attempts = [
-        ("DELETE", f"/v3/keys/{kid}"),
-        ("POST", f"/v3/keys/{kid}/revoke"),
-        ("DELETE", f"/v3/keys/{kid}/revoke"),
-    ]
-    last: tuple[int, Any] = (0, {})
-    for method, path in attempts:
-        status, data = request(method, path, token)
-        last = (status, data)
-        if status in (200, 202, 204, 404):
-            return
-    raise HonchoError(f"revoke key {key_id}: all attempts failed; last HTTP {last[0]}: {last[1]!r}")
-
-
-def list_workspace_key_ids(token: str, workspace_id: str) -> list[str]:
-    """Best-effort list of cloud key ids for a workspace (Honcho keys API)."""
-    ids: list[str] = []
-    for path, body in [
-        ("/v3/keys/list", {"filters": {"workspace_id": workspace_id}, "page": 1, "size": 100}),
-        ("/v3/keys/list", {"workspace_id": workspace_id, "page": 1, "size": 100}),
-    ]:
-        status, data = request("POST", path, token, body=body)
-        if status != 200 or not isinstance(data, dict):
-            continue
-        batch = data.get("items") or data.get("keys") or []
-        for row in batch:
-            if isinstance(row, dict) and row.get("id"):
-                ids.append(str(row["id"]))
-        if ids:
-            break
-    return ids
-
-
-def revoke_client_keys(token: str, slug: str, saved: dict) -> list[str]:
-    key_ids: list[str] = []
-    stored_id = (saved.get("client_key_id") or "").strip()
-    if stored_id:
-        key_ids.append(stored_id)
-    else:
-        ws = (saved.get("workspace_id") or "").strip() or slug_to_workspace(slug)
-        key_ids.extend(list_workspace_key_ids(token, ws))
-    revoked: list[str] = []
-    for kid in dict.fromkeys(key_ids):
-        revoke_key_id(token, kid)
-        revoked.append(kid)
-    return revoked
+def list_all_workspaces(token: str) -> list[dict]:
+    return list_items(token, "/v3/workspaces/list", "workspaces/list")
 
 
 def workspace_exists(token: str, workspace_id: str) -> bool:
-    status, _ = request("GET", ws_path(workspace_id, ""), token)
-    return status == 200
+    target = workspace_id.strip()
+    for row in list_all_workspaces(token):
+        wid = row.get("id") or row.get("workspace_id") or row.get("name")
+        if wid is not None and str(wid) == target:
+            return True
+    return False
 
 
 def wait_workspace_deleted(token: str, workspace_id: str) -> None:
@@ -452,23 +383,20 @@ def cmd_provision(args: argparse.Namespace) -> int:
 
     get_or_create_workspace(token, workspace_id, args.slug)
     client_key = None
-    client_key_id = None
     if sp.is_file() and not args.remint_key:
         try:
             saved = json.loads(sp.read_text())
-            client_key = saved.get("client_key", "").strip() or None
-            client_key_id = saved.get("client_key_id", "").strip() or None
+            client_key = (saved.get("client_key") or "").strip() or None
         except (OSError, json.JSONDecodeError):
             client_key = None
     if not client_key:
-        client_key, client_key_id = mint_workspace_key(token, workspace_id)
+        client_key = mint_workspace_key(token, workspace_id)
         sp.write_text(
             json.dumps(
                 {
                     "workspace_id": workspace_id,
                     "slug": args.slug,
                     "client_key": client_key,
-                    "client_key_id": client_key_id,
                     "note": "Ops-only state; store client_key in client 1Password HONCHO_API_KEY",
                 },
                 indent=2,
@@ -487,7 +415,6 @@ def cmd_provision(args: argparse.Namespace) -> int:
         "peer_name": peer_name,
         "ai_peer": "feina-agent",
         "client_key": client_key,
-        "client_key_id": client_key_id,
         "state_file": str(sp),
     }
     if args.json:
@@ -549,45 +476,61 @@ def cmd_teardown(args: argparse.Namespace) -> int:
         print("Teardown aborted: export did not complete.", file=sys.stderr)
         return 1
 
-    saved: dict = {}
-    if sp.is_file():
-        try:
-            saved = json.loads(sp.read_text())
-        except (OSError, json.JSONDecodeError):
-            saved = {}
-
     try:
         if workspace_exists(token, workspace_id):
             delete_all_sessions(token, workspace_id)
             status, data = request("DELETE", ws_path(workspace_id, ""), token)
-            require_http(status, data, "delete workspace", ok=(200, 202, 204, 404))
-            if status != 404:
-                wait_workspace_deleted(token, workspace_id)
+            require_http(status, data, "delete workspace", ok=(200, 202, 204))
+            wait_workspace_deleted(token, workspace_id)
+        else:
+            print(f"Honcho workspace {workspace_id} not in workspaces/list (already absent).")
     except HonchoError as exc:
         print(f"Honcho teardown failed: {exc}", file=sys.stderr)
+        print(SCOPED_KEY_REVOKE_NOTICE)
+        print("Keeping local ops state (honcho.json) until workspace is confirmed gone.", file=sys.stderr)
         return 1
 
-    revoked_ids: list[str] = []
-    try:
-        if saved:
-            revoked_ids = revoke_client_keys(token, args.slug, saved)
-            append_revoked_keys(args.slug, revoked_ids)
-    except HonchoError as exc:
-        print(f"Honcho key revoke failed: {exc}", file=sys.stderr)
+    if workspace_exists(token, workspace_id):
+        print(f"Honcho workspace {workspace_id} still appears in workspaces/list.", file=sys.stderr)
+        print(SCOPED_KEY_REVOKE_NOTICE)
+        print("Keeping local ops state (honcho.json) until workspace is confirmed gone.", file=sys.stderr)
         return 1
 
+    print(SCOPED_KEY_REVOKE_NOTICE)
     if sp.is_file() and not args.keep_state:
         sp.unlink(missing_ok=True)
-    if revoked_ids:
-        print(f"Revoked workspace key id(s): {', '.join(revoked_ids)}")
-    print(f"Honcho workspace {workspace_id} removed.")
+    print(f"Honcho workspace {workspace_id} confirmed removed from workspaces/list.")
     return 0
+
+
+def orgo_computer_bash(
+    api_base: str,
+    orgo_key: str,
+    computer_id: str,
+    command: str,
+    stdin_payload: str | None = None,
+) -> None:
+    url = f"{api_base.rstrip('/')}/computers/{computer_id}/bash"
+    body: dict[str, Any] = {"command": command}
+    if stdin_payload is not None:
+        body["stdin"] = stdin_payload
+    data = json.dumps(body).encode()
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={
+            "Authorization": f"Bearer {orgo_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=180):
+        return
 
 
 def cmd_push_config(args: argparse.Namespace) -> int:
     """Push Honcho client config to a client VM via Orgo bash API."""
-    import subprocess
-
     orgo_key = os.environ.get("ORGO_API_KEY", "").strip()
     if not orgo_key:
         raise SystemExit("ORGO_API_KEY required for push-config")
@@ -599,7 +542,7 @@ def cmd_push_config(args: argparse.Namespace) -> int:
     if not sp.is_file():
         raise SystemExit(f"No Honcho state for {workspace_id}; run provision first")
     saved = json.loads(sp.read_text())
-    client_key = saved.get("client_key", "").strip()
+    client_key = (saved.get("client_key") or "").strip()
     if not client_key:
         raise SystemExit("state file missing client_key")
 
@@ -610,31 +553,23 @@ def cmd_push_config(args: argparse.Namespace) -> int:
         "ai_peer": "feina-agent",
     }
     payload_json = json.dumps(payload)
-    remote = f"""set -euo pipefail
-install -d -m 700 /run/feina
-cat <<'FEINA_HONCHO_JSON' > /run/feina/honcho-apply.json
-{payload_json}
-FEINA_HONCHO_JSON
-chmod 600 /run/feina/honcho-apply.json
-python3 /usr/local/bin/feina-honcho-apply.py < /run/feina/honcho-apply.json
-rm -f /run/feina/honcho-apply.json
-"""
-    subprocess.run(
-        [
-            "curl",
-            "-fsS",
-            "-X",
-            "POST",
-            f"{api_base}/computers/{cid}/bash",
-            "-H",
-            f"Authorization: Bearer {orgo_key}",
-            "-H",
-            "Content-Type: application/json",
-            "-d",
-            json.dumps({"command": remote}),
-        ],
-        check=True,
+    receiver = "python3 /usr/local/bin/feina-honcho-push-receive.py"
+    heredoc_cmd = (
+        "set -euo pipefail\n"
+        f"{receiver} <<'FEINA_HONCHO_EOF'\n"
+        f"{payload_json}\n"
+        "FEINA_HONCHO_EOF\n"
     )
+    if "base64" in heredoc_cmd.lower():
+        raise SystemExit("internal error: push-config must not use base64 on the VM")
+
+    try:
+        orgo_computer_bash(api_base, orgo_key, cid, receiver, stdin_payload=payload_json)
+    except urllib.error.HTTPError as exc:
+        if exc.code in (400, 404, 422, 501):
+            orgo_computer_bash(api_base, orgo_key, cid, heredoc_cmd)
+        else:
+            raise
     print(f"Pushed Honcho config to computer {cid} (workspace {workspace_id}).")
     return 0
 

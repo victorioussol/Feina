@@ -5,7 +5,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 FILES_DIR="$ROOT/files"
 
-python3 -m py_compile build_template.py files/op-enable.py files/telegram-pair.py files/feina-enable.py files/feina-honcho-sync.py files/feina-honcho-apply.py files/feina-telegram-pending.py ops/feina_honcho.py ops/feina_launch_state.py ops/feina_launch.py ops/ready_check.py
+python3 -m py_compile build_template.py files/op-enable.py files/telegram-pair.py files/feina-enable.py files/feina-honcho-sync.py files/feina-honcho-apply.py files/feina-honcho-push-receive.py files/feina-telegram-pending.py ops/feina_honcho.py ops/feina_launch_state.py ops/feina_launch.py ops/ready_check.py ops/test_feina_honcho_unit.py
+PYTHONPATH="$ROOT/ops" python3 -m unittest test_feina_honcho_unit -q
 python3 -c "import yaml; yaml.safe_load(open('files/config.yaml'))"
 python3 build_template.py
 

@@ -32,6 +32,8 @@ echo "Export vault hint (run on computer before delete if client wants data):"
 echo "  tar czf /tmp/hermes-vault.tgz -C /root/Documents HermesVault"
 echo ""
 echo "Revoke keys out of band: Composio, AgentMail, Latitude, 1Password vault, Telegram bot."
+echo "Honcho: scoped workspace keys cannot be revoked via API — after export/teardown,"
+echo "  revoke or rotate in the Honcho dashboard (app.honcho.dev -> API Keys) if available."
 echo ""
 
 if [ -n "$SLUG" ] && [ -n "${FEINA_HONCHO_ADMIN_KEY:-}" ]; then
