@@ -14,6 +14,8 @@ usage() {
   cat <<'EOF'
 feina-onboard — non-interactive client setup
 
+Integration toggles:  feina enable|disable|list  (e.g. feina enable agentphone)
+
   model-codex              Start ChatGPT (openai-codex) device login; prints URL + code
   model-openrouter <key>   Set OPENROUTER_API_KEY and switch default provider
   telegram-qr [bot name]   Mint Telegram QR (headless); prints deep link + PNG path
@@ -128,7 +130,13 @@ PY
     fi
     echo "MCP servers:"
     hermes mcp list 2>/dev/null || true
-    ORGO_HITS=$(grep -r 'ORGO_API_KEY' "$HERMES_HOME" /root/.env 2>/dev/null | wc -l || echo 0)
+    python3 - <<'PY' || true
+import yaml
+c=yaml.safe_load(open("/root/.hermes/config.yaml"))
+o=(c.get("mcp_servers") or {}).get("orgo") or {}
+print("orgo MCP enabled:", o.get("enabled", False), "(must be False on clients)")
+PY
+    ORGO_HITS=$(grep -rE '^ORGO_API_KEY=|^ORGO_DEFAULT_COMPUTER_ID=' "$HERMES_HOME/.env" /root/.env 2>/dev/null | wc -l || echo 0)
     if [ "$ORGO_HITS" -eq 0 ]; then
       echo "ORGO_API_KEY: none found (good)"
     else

@@ -18,11 +18,33 @@ Hermes is pinned to **v0.21.7** (`71d34bad1045610252eda02ee79549436896e784`).
 | 1Password | Optional per-client vault (`Feina - <Client>`) |
 | Persona | Calm chief-of-staff; **approvals on** before send/delete/spend |
 
-## Explicitly removed (vs Nick's stack)
+## On by default (Basic)
 
-Orgo MCP and desktop-control plugin, AgentPhone, AgentCard, X/Linear/ideabrowser/vidiq, Nous as default model, desktop onboarding UI, wallpaper autostart, and related skills. **No `ORGO_*` keys** may exist on client machines.
+Composio, AgentMail, Latitude, notes vault MCP — enabled in config (keys still required at runtime).
 
-Industry skills are **not** baked in — use `files/skills/client-drop/` (see README there).
+## Installed but off by default (enable per client)
+
+Packages, skills, and MCP entries are **present in the image** with `enabled: false` and empty keys until you turn them on:
+
+| Integration | Enable |
+|-------------|--------|
+| AgentPhone (+ webhook bridge) | `feina enable agentphone` then set `AGENTPHONE_*` keys |
+| AgentCard | `feina enable agentcard` |
+| vidIQ, IdeaBrowser, Linear | `feina enable vidiq` / `ideabrowser` / `linear` |
+| X (x-docs, xapi, xapi-app-only) | `feina enable x-docs` etc. |
+| Spotify / xAI plugins | `feina enable spotify` / `xai` |
+
+List state: `feina list`. Setup keys: `feina-onboard …`.
+
+## Removed or blocked (security / product)
+
+- **Orgo control on clients:** `orgo` MCP and `orgo-desktop-local` plugin stay in the tree but **`feina enable orgo` is refused**; `ORGO_*` keys are stripped from `.env` and never bridged from the launch vault.
+- **Nous** as default model (use openai-codex or OpenRouter).
+- Nick's aggressive persona and approvals-off (Feina SOUL + approvals on).
+- Desktop onboarding UI, wallpaper autostart (headless client product).
+- Nick/Dewey personal references scrubbed where feasible in shipped skills.
+
+Industry packs are **not** baked in — use `/root/.hermes/skills/client-drop/`.
 
 ## Launch a new client
 
@@ -65,7 +87,8 @@ Plain-language flow for Feina ops (not the client):
    ```
 6. **Keys** — `feina-onboard composio …`, `agentmail …`, `latitude …`, `op-token …` as needed.
 7. **Industry pack** — copy skills into `/root/.hermes/skills/client-drop/` and seed vault notes.
-8. **Verify** — `feina-onboard status` (gateway running, Hermes 0.21.7, MCP list without orgo/x/linear, no ORGO keys).
+8. **Optional integrations** — `feina enable agentphone` (etc.), then add keys and restart checks via `feina-onboard status`.
+9. **Verify** — `feina-onboard status` (Hermes 0.21.7, orgo MCP off, no `ORGO_*` in `.env`).
 
 **Meeting day:** client connects Composio apps and sends a Telegram message; you `allow-user` their id.
 

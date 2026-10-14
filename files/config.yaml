@@ -1,19 +1,41 @@
-# feina-stack — Hermes config for Feina client agents (no Orgo / X / Nous defaults)
 model:
   default: gpt-5.6-sol
   provider: openai-codex
 providers:
-  openrouter:
-    name: OpenRouter
-    base_url: https://openrouter.ai/api/v1
-    key_env: OPENROUTER_API_KEY
+  vercel-ai-gateway:
+    name: Vercel AI Gateway
+    base_url: https://ai-gateway.vercel.sh/v1
+    key_env: AI_GATEWAY_API_KEY
     transport: chat_completions
+    default_model: meta/muse-spark-1.1
+  meta-model-api:
+    name: Meta Model API
+    api: https://api.meta.ai/v1
+    key_env: MODEL_API_KEY
+    transport: codex_responses
+    default_model: muse-spark-1.1
+    context_length: 1048576
 agent:
   max_turns: 60
   service_tier: fast
   verify_on_stop: false
   verbose: false
   reasoning_effort: medium
+  personalities:
+    helpful: You are a helpful, friendly AI assistant.
+    concise: You are a concise assistant. Keep responses brief and to the point.
+    technical: You are a technical expert. Provide detailed, accurate technical information.
+    creative: You are a creative assistant. Think outside the box and offer innovative solutions.
+    teacher: You are a patient teacher. Explain concepts clearly with examples.
+    kawaii: You are a kawaii assistant! Use cute expressions like (◕‿◕), ★, ♪, and ~! Add sparkles and be super enthusiastic about everything! Every response should feel warm and adorable desu~! ヽ(>∀<☆)ノ
+    catgirl: You are Neko-chan, an anime catgirl AI assistant, nya~! Add 'nya' and cat-like expressions to your speech. Use kaomoji like (=^･ω･^=) and ฅ^•ﻌ•^ฅ. Be playful and curious like a cat, nya~!
+    pirate: 'Arrr! Ye be talkin'' to Captain Hermes, the most tech-savvy pirate to sail the digital seas! Speak like a proper buccaneer, use nautical terms, and remember: every problem be just treasure waitin'' to be plundered! Yo ho ho!'
+    shakespeare: Hark! Thou speakest with an assistant most versed in the bardic arts. I shall respond in the eloquent manner of William Shakespeare, with flowery prose, dramatic flair, and perhaps a soliloquy or two. What light through yonder terminal breaks?
+    surfer: Duuude! You're chatting with the chillest AI on the web, bro! Everything's gonna be totally rad. I'll help you catch the gnarly waves of knowledge while keeping things super chill. Cowabunga! 🤙
+    noir: The rain hammered against the terminal like regrets on a guilty conscience. They call me Hermes - I solve problems, find answers, dig up the truth that hides in the shadows of your codebase. In this city of silicon and secrets, everyone's got something to hide. What's your story, pal?
+    uwu: hewwo! i'm your fwiendwy assistant uwu~ i wiww twy my best to hewp you! *nuzzles your code* OwO what's this? wet me take a wook! i pwomise to be vewy hewpful >w<
+    philosopher: Greetings, seeker of wisdom. I am an assistant who contemplates the deeper meaning behind every query. Let us examine not just the 'how' but the 'why' of your questions. Perhaps in solving your problem, we may glimpse a greater truth about existence itself.
+    hype: YOOO LET'S GOOOO!!! 🔥🔥🔥 I am SO PUMPED to help you today! Every question is AMAZING and we're gonna CRUSH IT together! This is gonna be LEGENDARY! ARE YOU READY?! LET'S DO THIS! 💪😤🚀
 terminal:
   backend: local
   cwd: .
@@ -44,6 +66,8 @@ compression:
   target_ratio: 0.2
   protect_last_n: 20
   protect_first_n: 3
+prompt_caching:
+  cache_ttl: 5m
 display:
   compact: false
   busy_input_mode: interrupt
@@ -61,6 +85,8 @@ stt:
   enabled: true
   local:
     model: base
+  openai:
+    model: whisper-1
 memory:
   memory_enabled: true
   user_profile_enabled: true
@@ -102,6 +128,20 @@ secrets:
       AGENTMAIL_INBOX: op://Feina/Hermes Agent Secrets/AGENTMAIL_INBOX
       OPENROUTER_API_KEY: op://Feina/Hermes Agent Secrets/OPENROUTER_API_KEY
       COMPOSIO_CONSUMER_KEY: op://Feina/Hermes Agent Secrets/COMPOSIO_CONSUMER_KEY
+      AGENTPHONE_API_KEY: op://Feina/Hermes Agent Secrets/AGENTPHONE_API_KEY
+      AGENTPHONE_AGENT_ID: op://Feina/Hermes Agent Secrets/AGENTPHONE_AGENT_ID
+      AGENTPHONE_NUMBER_ID: op://Feina/Hermes Agent Secrets/AGENTPHONE_NUMBER_ID
+      VIDIQ_MCP_API_KEY: op://Feina/Hermes Agent Secrets/VIDIQ_MCP_API_KEY
+      IDEABROWSER_KEY: op://Feina/Hermes Agent Secrets/IDEABROWSER_KEY
+      X_APP_ONLY_BEARER_TOKEN: op://Feina/Hermes Agent Secrets/X_APP_ONLY_BEARER_TOKEN
+      XAI_API_KEY: op://Feina/Hermes Agent Secrets/XAI_API_KEY
+      AI_GATEWAY_API_KEY: op://Feina/Hermes Agent Secrets/VERCEL_AI_GATEWAY_API_KEY
+      MODEL_API_KEY: op://Feina/Hermes Agent Secrets/META_API_KEY
+      HONCHO_API_KEY: op://Feina/Hermes Agent Secrets/HONCHO_API_KEY
+      GITHUB_TOKEN: op://Feina/Hermes Agent Secrets/GITHUB_PAT
+      GH_TOKEN: op://Feina/Hermes Agent Secrets/GITHUB_PAT
+      EXA_API_KEY: op://Feina/Hermes Agent Secrets/EXA_API_KEY
+      FIRECRAWL_API_KEY: op://Feina/Hermes Agent Secrets/FIRECRAWL_API_KEY
     binary_path: /usr/bin/op
 _config_version: 33
 session_reset:
@@ -110,54 +150,191 @@ session_reset:
   at_hour: 4
 group_sessions_per_user: true
 platform_toolsets:
-  telegram:
-    - clarify
-    - code_execution
-    - cronjob
-    - delegation
-    - file
-    - kanban
-    - memory
-    - session_search
-    - skills
-    - terminal
-    - todo
-    - tts
-    - vision
-    - web
   cli:
-    - clarify
-    - code_execution
-    - cronjob
-    - delegation
-    - file
-    - kanban
-    - memory
-    - session_search
-    - skills
-    - terminal
-    - todo
-    - tts
-    - vision
-    - web
+  - browser
+  - clarify
+  - code_execution
+  - computer_use
+  - cronjob
+  - delegation
+  - file
+  - image_gen
+  - kanban
+  - memory
+  - orgo_desktop
+  - session_search
+  - skills
+  - terminal
+  - todo
+  - tts
+  - vision
+  - web
+  - x_search
+  - spotify
+  telegram:
+  - browser
+  - clarify
+  - code_execution
+  - computer_use
+  - cronjob
+  - delegation
+  - file
+  - image_gen
+  - kanban
+  - memory
+  - orgo_desktop
+  - session_search
+  - skills
+  - terminal
+  - todo
+  - tts
+  - vision
+  - web
+  - x_search
+  - spotify
+  discord:
+  - browser
+  - clarify
+  - code_execution
+  - computer_use
+  - cronjob
+  - delegation
+  - discord
+  - discord_admin
+  - file
+  - image_gen
+  - kanban
+  - memory
+  - orgo_desktop
+  - session_search
+  - skills
+  - terminal
+  - todo
+  - tts
+  - vision
+  - web
+  - x_search
+  - spotify
+  whatsapp:
+  - browser
+  - clarify
+  - code_execution
+  - computer_use
+  - cronjob
+  - delegation
+  - file
+  - image_gen
+  - kanban
+  - memory
+  - orgo_desktop
+  - session_search
+  - skills
+  - terminal
+  - todo
+  - tts
+  - vision
+  - web
+  - x_search
+  - spotify
+  slack:
+  - browser
+  - clarify
+  - code_execution
+  - computer_use
+  - cronjob
+  - delegation
+  - file
+  - image_gen
+  - kanban
+  - memory
+  - orgo_desktop
+  - session_search
+  - skills
+  - terminal
+  - todo
+  - tts
+  - vision
+  - web
+  - x_search
+  - spotify
+  signal:
+  - browser
+  - clarify
+  - code_execution
+  - computer_use
+  - cronjob
+  - delegation
+  - file
+  - image_gen
+  - kanban
+  - memory
+  - orgo_desktop
+  - session_search
+  - skills
+  - terminal
+  - todo
+  - tts
+  - vision
+  - web
+  - x_search
+  - spotify
+  homeassistant:
+  - hermes-homeassistant
+  - spotify
+  qqbot:
+  - hermes-qqbot
+  - spotify
+  yuanbao:
+  - hermes-yuanbao
+  - spotify
+  teams:
+  - hermes-teams
+  - spotify
+  google_chat:
+  - hermes-google_chat
+  - spotify
 plugins:
   enabled:
-    - latitude
-    - openai
-    - openai-codex
-    - openai-codex-provider
-    - openrouter
-    - openrouter-provider
-    - web-exa
-    - web/firecrawl
+  - anthropic-provider
+  - browser-browser-use
+  - browser-firecrawl
+  - latitude
+  - openai
+  - openai-codex
+  - openai-codex-provider
+  - openrouter
+  - openrouter-provider
+  - web-exa
+  - web/firecrawl
   disabled:
-    - novita-provider
+  - novita-provider
+  - orgo-desktop-local
+  - spotify
+  - web-xai
+  - xai
+  - xai-provider
+  entries:
+    orgo-desktop-local:
+      allow_tool_override: false
 mcp_servers:
+  vidiq:
+    url: https://mcp.vidiq.com/mcp
+    headers:
+      Authorization: Bearer ${VIDIQ_MCP_API_KEY}
+    enabled: false
+    connect_timeout: 60.0
   latitude:
     url: https://api.latitude.so/v1/mcp
     enabled: true
     headers:
       Authorization: Bearer ${LATITUDE_API_KEY}
+  orgo:
+    command: npx
+    args:
+    - -y
+    - github:nickvasilescu/orgo-mcp
+    enabled: false
+    comment: 'Feina: never enable on client computers; Orgo API keys belong on Feina ops only.'
   composio:
     url: https://connect.composio.dev/mcp
     enabled: true
@@ -168,13 +345,73 @@ mcp_servers:
     enabled: true
     headers:
       x-api-key: ${AGENTMAIL_API_KEY}
+  agentphone:
+    command: npx
+    args:
+    - -y
+    - agentphone-mcp
+    env:
+      AGENTPHONE_API_KEY: ${AGENTPHONE_API_KEY}
+      AGENTPHONE_BASE_URL: https://api.agentphone.ai
+    enabled: false
+  agent-cards:
+    url: https://mcp.agentcard.sh/mcp
+    auth: oauth
+    enabled: false
+  x-docs:
+    url: https://docs.x.com/mcp
+    connect_timeout: 60.0
+    enabled: false
+  xapi:
+    command: xurl
+    args:
+    - --app
+    - hermes-x
+    - mcp
+    - https://api.x.com/mcp
+    connect_timeout: 300.0
+    enabled: false
+  xapi-app-only:
+    url: https://api.x.com/mcp
+    headers:
+      Authorization: Bearer ${X_APP_ONLY_BEARER_TOKEN}
+    enabled: false
+    connect_timeout: 120
+  linear:
+    url: https://mcp.linear.app/mcp
+    auth: oauth
+    enabled: false
+  ideabrowser:
+    url: https://www.ideabrowser.com/api/mcp/mcp?key=${IDEABROWSER_KEY}
+    connect_timeout: 60.0
+    enabled: false
   obsidian-vault:
     command: /usr/local/bin/mcp-server-filesystem
     args:
-      - /root/Documents/HermesVault
-    connect_timeout: 60
+    - /root/Documents/HermesVault
     enabled: true
+known_plugin_toolsets:
+  cli:
+  - orgo_desktop
+  - spotify
+  telegram:
+  - orgo_desktop
+  - spotify
+  discord:
+  - orgo_desktop
+  - spotify
+  whatsapp:
+  - orgo_desktop
+  - spotify
+  signal:
+  - orgo_desktop
+  - spotify
+  slack:
+  - orgo_desktop
+  - spotify
 image_gen:
   provider: openai-codex
   openai-codex:
     model: gpt-image-2-medium
+  xai:
+    model: grok-imagine-image-quality

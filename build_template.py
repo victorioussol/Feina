@@ -116,13 +116,25 @@ files = [
     F("/usr/local/bin/feina-onboard.sh", rd("feina-onboard.sh"), "0755"),
     F("/usr/local/bin/feina-stack-telegram-pair.py", rd("telegram-pair.py"), "0755"),
     F("/usr/local/bin/feina-stack-op-enable", rd("op-enable.py"), "0755"),
+    F("/usr/local/bin/feina-enable.py", rd("feina-enable.py"), "0755"),
+    F("/usr/local/bin/feina", rd("feina"), "0755"),
+    F("/usr/local/bin/feina-stack-agentphone-bridge-run.sh", rd("agentphone-bridge-run.sh"), "0755"),
+    F(f"{STAGE}/agentphone-bridge/agentphone_bridge.py",
+      rd("agentphone-bridge/agentphone_bridge.py"), "0700"),
+    F(f"{STAGE}/agentphone-bridge/env", rd("agentphone-bridge/env"), "0600"),
+    F(f"{STAGE}/agentphone-bridge/test_event_ordering.py",
+      rd("agentphone-bridge/test_event_ordering.py"), "0644"),
 ]
 
 _BRIDGE_KEYS = (
     "COMPOSIO_CONSUMER_KEY AGENTMAIL_API_KEY AGENTMAIL_INBOX "
     "LATITUDE_API_KEY LATITUDE_PROJECT "
     "TELEGRAM_BOT_TOKEN TELEGRAM_ALLOWED_USERS TELEGRAM_HOME_CHANNEL "
-    "TELEGRAM_BOT_USERNAME OPENROUTER_API_KEY OWNER_EMAIL"
+    "TELEGRAM_BOT_USERNAME OPENROUTER_API_KEY OWNER_EMAIL "
+    "AGENTPHONE_API_KEY AGENTPHONE_AGENT_ID AGENTPHONE_NUMBER_ID AGENTPHONE_NUMBER "
+    "VIDIQ_MCP_API_KEY IDEABROWSER_KEY X_APP_ONLY_BEARER_TOKEN "
+    "XAI_API_KEY AI_GATEWAY_API_KEY MODEL_API_KEY HONCHO_API_KEY "
+    "GITHUB_TOKEN GH_TOKEN EXA_API_KEY FIRECRAWL_API_KEY HERMES_SPOTIFY_CLIENT_ID"
 )
 
 ON_FIRST_BOOT = """
@@ -143,6 +155,10 @@ for K in {_BRIDGE_KEYS}; do
   echo "${{K}}=${{V}}" >> "$E"
 done
 chmod 600 "$E"
+# Strip Orgo control keys — must never land on client computers.
+grep -vE '^(ORGO_API_KEY|ORGO_DEFAULT_COMPUTER_ID)=' "$E" > "$E.norgo" 2>/dev/null || true
+mv "$E.norgo" "$E"
+chmod 600 "$E"
 OPTOK="$(printenv OP_SERVICE_ACCOUNT_TOKEN 2>/dev/null || true)"
 if [ -n "$OPTOK" ]; then
   umask 077
@@ -158,9 +174,9 @@ template = {
         "name": NAME,
         "version": VERSION,
         "description": (
-            "Feina Stack — a headless Hermes client agent: Telegram-only interface, "
-            "ChatGPT (openai-codex) or OpenRouter, Composio, AgentMail, notes vault, "
-            "optional 1Password and Latitude. No Orgo control on client machines."
+            "Feina Stack — headless Hermes client agent (Telegram interface). "
+            "Advanced integrations (AgentPhone, X, Linear, …) ship installed but disabled; "
+            "enable per client with `feina enable`. Orgo control never enabled on clients."
         ),
         "publisher": "orgo",
         "license": "MIT",
@@ -196,6 +212,12 @@ template = {
          "description": "OpenRouter key when not using ChatGPT OAuth.", "example": "sk-or-..."},
         {"name": "owner_email", "optional": True,
          "description": "Optional notify address.", "example": "owner@example.com"},
+        {"name": "agentphone_api_key", "optional": True,
+         "description": "AgentPhone (off until feina enable agentphone + keys).", "example": "sk_live_..."},
+        {"name": "agentphone_agent_id", "optional": True, "description": "AgentPhone agent id.", "example": "cm..."},
+        {"name": "vidiq_mcp_api_key", "optional": True, "description": "vidIQ MCP (off by default)."},
+        {"name": "ideabrowser_key", "optional": True, "description": "IdeaBrowser MCP (off by default)."},
+        {"name": "x_app_only_bearer_token", "optional": True, "description": "X API app-only MCP (off by default)."},
     ],
     "build": {
         "apt": ["git", "xz-utils", "python3-yaml", "ripgrep", "ffmpeg"],
@@ -212,6 +234,13 @@ template = {
                     "name": "hermes-gateway",
                     "title": "Hermes gateway",
                     "run": "/usr/local/bin/hermes-gateway-run.sh",
+                    "user": "root",
+                    "restart": "always",
+                },
+                {
+                    "name": "agentphone-bridge",
+                    "title": "AgentPhone webhook bridge",
+                    "run": "/usr/local/bin/feina-stack-agentphone-bridge-run.sh",
                     "user": "root",
                     "restart": "always",
                 },

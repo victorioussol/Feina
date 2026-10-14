@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# feina-stack — client integration toggles + onboarding entrypoint
+set -euo pipefail
+export PATH=/usr/local/bin:/root/.hermes/bin:/usr/bin:/bin:$PATH
+case "${1:-}" in
+  enable|disable|list)
+    exec python3 /usr/local/bin/feina-enable.py "$@"
+    ;;
+  ""|-h|--help|help)
+    cat <<'EOF'
+feina — Feina client agent controls
+
+  feina enable <integration>   Turn on an optional MCP/plugin (see: feina list)
+  feina disable <integration>  Turn off
+  feina list                   Show on/off state
+
+Orgo / orgo-desktop integrations are blocked on client machines.
+
+Setup (model, Telegram, keys): feina-onboard help
+EOF
+    ;;
+  *)
+    exec /usr/local/bin/feina-onboard.sh "$@"
+    ;;
+esac

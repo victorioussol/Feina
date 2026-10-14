@@ -49,6 +49,18 @@ fi
 MCP_FS_BIN="$(command -v mcp-server-filesystem)"
 echo "mcp-server-filesystem: $MCP_FS_BIN"
 
+npm install -g agent-cards@0.5.59 @xdevplatform/xurl \
+  || npm install -g agent-cards @xdevplatform/xurl
+
+if ! command -v cloudflared >/dev/null 2>&1; then
+  curl -fsSL -o /usr/local/bin/cloudflared \
+    https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+  chmod +x /usr/local/bin/cloudflared
+fi
+cloudflared --version 2>/dev/null || true
+
+timeout 60 npx -y agentphone-mcp </dev/null >/dev/null 2>&1 || true
+
 # 4) qrcode into the Hermes venv (Telegram pairing PNG)
 VENV_PY=/usr/local/lib/hermes-agent/venv/bin/python
 if [ -x "$VENV_PY" ]; then
@@ -61,7 +73,7 @@ fi
 mkdir -p "$STAGE" /root/.hermes/plugins /root/.hermes/skills /root/.hermes/scripts \
          /root/.hermes/local-packages /root/.hermes/memories /root/.hermes/state \
          /root/Documents/HermesVault /root/.hermes/skills/client-drop \
-         /var/log/orgo /var/lib/orgo
+         /root/.hermes_agentphone_bridge /var/log/orgo /var/lib/orgo
 
 if [ -f /opt/feina-stack/payload.tgz.b64 ]; then
   base64 -d /opt/feina-stack/payload.tgz.b64 | tar xzf - -C "$STAGE"
@@ -87,7 +99,19 @@ if [ -f "$STAGE/hermes/config.yaml" ]; then
   cp -rf "$STAGE/hermes/scripts/."   /root/.hermes/scripts/ 2>/dev/null || true
   cp -rf "$STAGE/hermes/local-packages/." /root/.hermes/local-packages/ 2>/dev/null || true
   [ -d "$STAGE/vault" ] && cp -rf "$STAGE/vault/." /root/Documents/HermesVault/
+  grep -vE '^(ORGO_API_KEY|ORGO_DEFAULT_COMPUTER_ID)=' /root/.hermes/.env > /root/.hermes/.env.norgo 2>/dev/null || true
+  mv /root/.hermes/.env.norgo /root/.hermes/.env
   chmod 600 /root/.hermes/config.yaml /root/.hermes/.env
+fi
+
+if [ -f "$STAGE/agentphone-bridge/agentphone_bridge.py" ]; then
+  cp -f "$STAGE/agentphone-bridge/agentphone_bridge.py" /root/.hermes_agentphone_bridge/
+  cp -f "$STAGE/agentphone-bridge/env" /root/.hermes_agentphone_bridge/
+  cp -f "$STAGE/agentphone-bridge/test_event_ordering.py" /root/.hermes_agentphone_bridge/ 2>/dev/null || true
+  chmod 700 /root/.hermes_agentphone_bridge/agentphone_bridge.py
+  chmod 600 /root/.hermes_agentphone_bridge/env 2>/dev/null || true
+elif [ -f /opt/feina-stack/src/files/agentphone-bridge/agentphone_bridge.py ]; then
+  cp -rf /opt/feina-stack/src/files/agentphone-bridge/. /root/.hermes_agentphone_bridge/
 fi
 
 # Vault skeleton (never overwrites notes)
@@ -140,7 +164,10 @@ fi
 # 9) Install helper binaries from stage if present
 for pair in \
   "gateway-run.sh:/usr/local/bin/hermes-gateway-run.sh" \
+  "agentphone-bridge-run.sh:/usr/local/bin/feina-stack-agentphone-bridge-run.sh" \
   "feina-onboard.sh:/usr/local/bin/feina-onboard.sh" \
+  "feina-enable.py:/usr/local/bin/feina-enable.py" \
+  "feina:/usr/local/bin/feina" \
   "telegram-pair.py:/usr/local/bin/feina-stack-telegram-pair.py" \
   "op-enable.py:/usr/local/bin/feina-stack-op-enable"; do
   src="${pair%%:*}"; dst="${pair##*:}"
