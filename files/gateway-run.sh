@@ -13,7 +13,10 @@ until [ -f "$HERMES_HOME/config.yaml" ] && [ -s "$HERMES_HOME/auth.json" ]; do s
 set -a
 [ -f /root/.env ] && . /root/.env
 [ -f "$HERMES_HOME/.env" ] && . "$HERMES_HOME/.env"
+[ -f "$HERMES_HOME/.op.env" ] && . "$HERMES_HOME/.op.env"
 set +a
 
 mkdir -p /var/lib/orgo
+python3 /usr/local/bin/feina-honcho-sync.py 2>/dev/null || true
+
 exec flock /var/lib/orgo/hermes-gateway.lock hermes gateway run --replace --accept-hooks

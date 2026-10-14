@@ -9,6 +9,7 @@ import yaml
 
 CONFIG = "/root/.hermes/config.yaml"
 AGENTPHONE_FLAG = "/var/lib/orgo/feina-agentphone-enabled"
+HONCHO_DISABLED_FLAG = "/var/lib/orgo/feina-honcho-disabled"
 
 BLOCKED = frozenset(
     {
@@ -49,6 +50,20 @@ INTEGRATIONS = {
 def load_cfg():
     with open(CONFIG) as fh:
         return yaml.safe_load(fh) or {}
+
+
+def load_client_env():
+    for path in ("/root/.hermes/.env", "/root/.hermes/.op.env", "/root/.env"):
+        try:
+            with open(path) as fh:
+                for line in fh:
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    key, val = line.split("=", 1)
+                    os.environ.setdefault(key.strip(), val.strip())
+        except OSError:
+            pass
 
 
 def save_cfg(cfg):
@@ -105,8 +120,18 @@ def set_spotify_toolset(cfg, on: bool):
 
 
 def set_honcho(cfg, on: bool):
+    os.makedirs("/var/lib/orgo", exist_ok=True)
     mem = cfg.setdefault("memory", {})
-    mem["provider"] = "honcho" if on else ""
+    if on:
+        try:
+            os.remove(HONCHO_DISABLED_FLAG)
+        except OSError:
+            pass
+        key = os.environ.get("HONCHO_API_KEY", "").strip()
+        mem["provider"] = "honcho" if key else ""
+    else:
+        open(HONCHO_DISABLED_FLAG, "w").close()
+        mem["provider"] = ""
 
 
 def agentphone_bridge(on: bool):
@@ -146,6 +171,15 @@ def cmd_list(cfg):
         print(f"  {name}: {'on' if name in en else 'off'}")
     ap = "on" if os.path.isfile(AGENTPHONE_FLAG) else "off"
     print(f"agentphone-bridge service flag: {ap}")
+    honcho_off = os.path.isfile(HONCHO_DISABLED_FLAG)
+    key = os.environ.get("HONCHO_API_KEY", "").strip()
+    if honcho_off:
+        honcho_state = "off (feina disable honcho)"
+    elif not key:
+        honcho_state = "off (no HONCHO_API_KEY yet)"
+    else:
+        honcho_state = "on"
+    print(f"honcho memory: {honcho_state}")
     print(f"memory.provider: {cfg.get('memory', {}).get('provider') or '(empty)'}")
 
 
@@ -156,6 +190,7 @@ def main():
     args = parser.parse_args()
 
     if args.action == "list":
+        load_client_env()
         cmd_list(load_cfg())
         return
 
@@ -174,6 +209,7 @@ def main():
         sys.exit(1)
 
     kind, target, extra = INTEGRATIONS[key]
+    load_client_env()
     cfg = load_cfg()
     on = args.action == "enable"
     if kind == "mcp":

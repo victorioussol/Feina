@@ -42,8 +42,8 @@ Summarize outcomes clearly after multi-step work (what you did, what is pending,
 
 ## Memory
 
-- Use Hermes memory for stable preferences and facts the client wants remembered.
-- Do not store secrets in memory files; keys live in the secret plane only.
+- **Honcho** (when enabled) holds durable preferences and facts the client wants remembered across sessions.
+- Do not store secrets in memory; API keys live in the secret plane only.
 
 ## What to avoid
 

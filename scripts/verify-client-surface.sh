@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 FILES_DIR="$ROOT/files"
 
-python3 -m py_compile build_template.py files/op-enable.py files/telegram-pair.py files/feina-enable.py
+python3 -m py_compile build_template.py files/op-enable.py files/telegram-pair.py files/feina-enable.py files/feina-honcho-sync.py
 python3 -c "import yaml; yaml.safe_load(open('files/config.yaml'))"
 python3 build_template.py
 
@@ -63,6 +63,12 @@ prov = c.get("providers") or {}
 for pname in ("vercel-ai-gateway", "meta-model-api"):
     p = prov.get(pname) or {}
     assert p.get("enabled") is False, f"provider {pname} must ship disabled for MVP"
+mem = c.get("memory") or {}
+assert mem.get("provider") == "honcho", "memory.provider must default to honcho for client launches"
+lin = (c.get("mcp_servers") or {}).get("linear") or {}
+assert lin.get("enabled") is False, "linear MCP must stay off on clients"
+op_map = ((c.get("secrets") or {}).get("onepassword") or {}).get("env") or {}
+assert "HONCHO_API_KEY" in op_map, "1Password map must include HONCHO_API_KEY"
 drop = {"computer_use", "orgo_desktop", "spotify"}
 for ch, tools in (c.get("platform_toolsets") or {}).items():
     if not isinstance(tools, list):
@@ -73,7 +79,7 @@ PY
 
 test ! -f "$FILES_DIR/wallpaper.jpg" || { echo "wallpaper.jpg must be removed" >&2; exit 1; }
 
-shellcheck -e SC1091 -x files/bootstrap.sh files/gateway-run.sh files/feina-onboard.sh files/feina \
+shellcheck -e SC1090,SC1091 -x files/bootstrap.sh files/gateway-run.sh files/feina-onboard.sh files/feina \
   files/agentphone-bridge-run.sh \
   files/scripts/latitude/install_local_telemetry_patch.sh ops/launch-client.sh ops/offboard-client.sh
 

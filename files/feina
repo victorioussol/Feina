@@ -11,10 +11,10 @@ case "${1:-}" in
 feina — Feina client agent controls
 
   feina enable <integration>   Turn on an optional MCP/plugin (see: feina list)
-  feina disable <integration>  Turn off
+  feina disable <integration>  Turn off (e.g. feina disable honcho)
   feina list                   Show on/off state
 
-Orgo / orgo-desktop integrations are blocked on client machines.
+Honcho memory is on by default when HONCHO_API_KEY is set. Orgo / orgo-desktop integrations are blocked on client machines.
 
 Setup (model, Telegram, keys): feina-onboard help
 EOF

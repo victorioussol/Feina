@@ -20,7 +20,9 @@ Hermes is pinned to **v0.21.7** (`71d34bad1045610252eda02ee79549436896e784`).
 
 ## On by default (Basic)
 
-Composio, AgentMail, Latitude, notes vault MCP — enabled in config (keys still required at runtime).
+Composio, AgentMail, Latitude, notes vault MCP, and **Honcho memory** (`memory.provider: honcho`) — enabled in config. Runtime keys still required: `HONCHO_API_KEY` comes from the client's 1Password / template secret (`op://Feina/Hermes Agent Secrets/HONCHO_API_KEY`). If the key is missing, the gateway **fail-opens** (Honcho off, no crash). Ops can turn it off with `feina disable honcho`.
+
+**Linear** MCP stays **off** on client computers (`feina enable linear` only when you deliberately opt in).
 
 ## Installed but off by default (enable per client)
 
@@ -84,10 +86,11 @@ Plain-language flow for Feina ops (not the client):
    feina-onboard allow-user <telegram_user_id>
    ```
    See skill `hermes-gateway-onboarding` → `references/telegram-managed-qr-onboarding.md`.
-6. **Keys** — `feina-onboard composio …`, `agentmail …`, `latitude …`, `op-token …` as needed.
-7. **Industry pack** — copy skills into `/root/.hermes/skills/client-drop/` and seed vault notes.
-8. **Optional integrations** — `feina enable agentphone` (etc.), then add keys and restart checks via `feina-onboard status`.
-9. **Verify** — `feina-onboard status` (Hermes 0.21.7, orgo MCP off, no `ORGO_*` in `.env`).
+6. **Honcho** — `feina-onboard op-token …` (vault includes `HONCHO_API_KEY`) or `feina-onboard honcho <key>`.
+7. **Keys** — `feina-onboard composio …`, `agentmail …`, `latitude …` as needed.
+8. **Industry pack** — copy skills into `/root/.hermes/skills/client-drop/` and seed vault notes.
+9. **Optional integrations** — `feina enable agentphone` (etc.), then add keys and restart checks via `feina-onboard status`.
+10. **Verify** — `feina-onboard status` (Hermes 0.21.7, Honcho key or fail-open, orgo MCP off, linear off, no `ORGO_*` in `.env`).
 
 **Meeting day:** client connects Composio apps and sends a Telegram message; you `allow-user` their id.
 

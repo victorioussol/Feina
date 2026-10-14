@@ -31,6 +31,7 @@ Integration toggles:  feina enable|disable|list  (e.g. feina enable agentphone)
   agentmail <am_...> [inbox@agentmail.to]
   latitude <key> <project> Set Latitude tracing (optional)
   op-token <ops_...>       Write 1Password service account token and enable map
+  honcho <key>             Set HONCHO_API_KEY (or use op-token + vault field)
   status                   Health check (gateway, Hermes version, MCPs, no ORGO keys)
 
 Alternate models (not MVP): use `feina enable openrouter` after adding keys via 1Password.
@@ -67,12 +68,17 @@ Step 2 — Telegram bot
   Run: feina-onboard telegram-qr "Client Name · Feina"
   Scan the QR with Feina's Telegram account; add the client with allow-user later.
 
-Step 3 — Keys (as needed)
+Step 3 — Honcho memory (recommended)
+  Add HONCHO_API_KEY to the client's 1Password item (Hermes Agent Secrets), then:
+  feina-onboard op-token <ops_...>
+  Or paste directly: feina-onboard honcho <key>
+  Without a key, Honcho stays off and the gateway still runs (fail-open).
+
+Step 4 — Keys (as needed)
   feina-onboard composio <ck_...>
   feina-onboard agentmail <am_...> [inbox]
-  feina-onboard op-token <ops_...>   # optional 1Password
 
-Step 4 — Verify
+Step 5 — Verify
   feina-onboard status
 
 Optional integrations (off by default): feina list  →  feina enable <name>
@@ -133,6 +139,14 @@ PY
     printf 'OP_SERVICE_ACCOUNT_TOKEN=%s\n' "$TOK" >"$OP_ENV"
     chmod 600 "$OP_ENV"
     python3 /usr/local/bin/feina-stack-op-enable
+    # shellcheck disable=SC1090
+    set -a; [ -f "$OP_ENV" ] && . "$OP_ENV"; [ -f "$ENV_FILE" ] && . "$ENV_FILE"; set +a
+    python3 /usr/local/bin/feina-honcho-sync.py 2>/dev/null || true
+    supervisorctl restart hermes-gateway 2>/dev/null || true
+    ;;
+  honcho)
+    append_env HONCHO_API_KEY "${1:?honcho api key}"
+    python3 /usr/local/bin/feina-honcho-sync.py 2>/dev/null || true
     supervisorctl restart hermes-gateway 2>/dev/null || true
     ;;
   status)
@@ -165,6 +179,23 @@ PY
       echo "Orgo keys in .env: FOUND (BAD)"
       exit 2
     fi
+    # shellcheck disable=SC1090
+    set -a; [ -f "$OP_ENV" ] && . "$OP_ENV"; [ -f "$ENV_FILE" ] && . "$ENV_FILE"; set +a
+    if [ -f /var/lib/orgo/feina-honcho-disabled ]; then
+      echo "Honcho memory: disabled via feina disable honcho"
+    elif [ -n "${HONCHO_API_KEY:-}" ]; then
+      echo "Honcho memory: key present (provider syncs on gateway start)"
+    else
+      echo "Honcho memory: no HONCHO_API_KEY (gateway runs without Honcho until key is set)"
+    fi
+    python3 /usr/local/bin/feina-honcho-sync.py 2>/dev/null || true
+    python3 - <<'PY' || true
+import yaml
+c=yaml.safe_load(open("/root/.hermes/config.yaml"))
+print("memory.provider:", (c.get("memory") or {}).get("provider") or "(empty)")
+lin=(c.get("mcp_servers") or {}).get("linear") or {}
+print("linear MCP enabled:", lin.get("enabled", False), "(must be False on clients)")
+PY
     ;;
   ""|-h|--help|help)
     usage
