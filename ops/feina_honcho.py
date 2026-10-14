@@ -16,6 +16,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -31,7 +32,13 @@ SECRET_FIELD_RE = re.compile(
     r"(api[_-]?key|client[_-]?key|secret|token|password|authorization|bearer)$",
     re.I,
 )
-EXPORT_VERSION = 1
+EXPORT_VERSION = 2
+WORKSPACE_DELETE_TIMEOUT_S = int(os.environ.get("FEINA_HONCHO_WORKSPACE_DELETE_TIMEOUT", "120"))
+WORKSPACE_DELETE_POLL_S = 5
+
+
+class HonchoError(Exception):
+    """Honcho API or export/teardown failure."""
 
 
 def admin_key() -> str:
@@ -93,6 +100,12 @@ def request(
         return exc.code, payload
 
 
+def require_http(status: int, data: Any, context: str, ok: tuple[int, ...] = (200,)) -> Any:
+    if status not in ok:
+        raise HonchoError(f"{context}: HTTP {status}: {data!r}")
+    return data
+
+
 def redact_secrets(obj: Any) -> Any:
     if isinstance(obj, dict):
         out: dict[str, Any] = {}
@@ -109,25 +122,28 @@ def redact_secrets(obj: Any) -> Any:
 
 def list_items(
     token: str,
-    workspace_id: str,
-    resource: str,
+    path: str,
+    context: str,
     page_size: int = 100,
+    body_extra: dict | None = None,
 ) -> list[dict]:
-    """Paginate Honcho v3 list endpoints (POST .../{resource}/list)."""
+    """Paginate Honcho v3 POST .../list endpoints; fail on any non-200."""
     items: list[dict] = []
     page = 1
     while True:
-        status, data = request(
-            "POST",
-            ws_path(workspace_id, f"/{resource}/list"),
-            token,
-            body={"filters": {}, "page": page, "size": page_size},
-        )
-        if status != 200 or not isinstance(data, dict):
-            break
-        batch = data.get("items") or data.get(resource) or []
+        body: dict[str, Any] = {"filters": {}, "page": page, "size": page_size}
+        if body_extra:
+            body.update(body_extra)
+        status, data = request("POST", path, token, body=body)
+        data = require_http(status, data, f"{context} page {page}")
+        if not isinstance(data, dict):
+            raise HonchoError(f"{context} page {page}: expected object, got {type(data)}")
+        batch = data.get("items") or []
+        for key in ("peers", "sessions", "messages", "conclusions", "keys"):
+            if not batch:
+                batch = data.get(key) or []
         if not isinstance(batch, list):
-            break
+            raise HonchoError(f"{context} page {page}: invalid items list")
         for row in batch:
             if isinstance(row, dict):
                 items.append(row)
@@ -138,25 +154,60 @@ def list_items(
             break
         page += 1
         if page > 500:
-            break
+            raise HonchoError(f"{context}: pagination exceeded 500 pages")
     return items
 
 
+def list_workspace_items(token: str, workspace_id: str, resource: str) -> list[dict]:
+    return list_items(
+        token,
+        ws_path(workspace_id, f"/{resource}/list"),
+        f"workspace {workspace_id} {resource}/list",
+    )
+
+
+def list_session_messages(token: str, workspace_id: str, session_id: str) -> list[dict]:
+    sid_q = urllib.parse.quote(str(session_id), safe="")
+    return list_items(
+        token,
+        ws_path(workspace_id, f"/sessions/{sid_q}/messages/list"),
+        f"session {session_id} messages/list",
+    )
+
+
+def optional_get(token: str, path: str, context: str) -> Any | None:
+    status, data = request("GET", path, token)
+    if status == 404:
+        return None
+    return require_http(status, data, context)
+
+
 def build_memory_export(token: str, workspace_id: str, slug: str) -> dict:
-    peers = list_items(token, workspace_id, "peers")
-    sessions = list_items(token, workspace_id, "sessions")
-    messages = list_items(token, workspace_id, "messages")
-    conclusions = list_items(token, workspace_id, "conclusions")
+    peers = list_workspace_items(token, workspace_id, "peers")
+    sessions = list_workspace_items(token, workspace_id, "sessions")
+    conclusions = list_workspace_items(token, workspace_id, "conclusions")
+
+    messages_by_session: list[dict] = []
+    for sess in sessions:
+        sid = sess.get("id")
+        if not sid:
+            raise HonchoError(f"session row missing id: {sess!r}")
+        messages_by_session.append(
+            {
+                "session_id": sid,
+                "messages": list_session_messages(token, workspace_id, str(sid)),
+            }
+        )
 
     peer_context: list[dict] = []
     peer_representations: list[dict] = []
     for peer in peers:
         pid = peer.get("id")
         if not pid:
-            continue
+            raise HonchoError(f"peer row missing id: {peer!r}")
         pid_q = urllib.parse.quote(str(pid), safe="")
-        st, ctx = request("GET", ws_path(workspace_id, f"/peers/{pid_q}/context"), token)
-        if st == 200:
+        ctx = optional_get(token, ws_path(workspace_id, f"/peers/{pid_q}/context"), f"peer {pid} context")
+        if ctx is not None:
             peer_context.append({"peer_id": pid, "context": ctx})
         st, rep = request(
             "POST",
@@ -166,6 +217,8 @@ def build_memory_export(token: str, workspace_id: str, slug: str) -> dict:
         )
         if st == 200:
             peer_representations.append({"peer_id": pid, "representation": rep})
+        elif st != 404:
+            raise HonchoError(f"peer {pid} representation: HTTP {st}: {rep!r}")
 
     session_context: list[dict] = []
     for sess in sessions:
@@ -173,8 +226,12 @@ def build_memory_export(token: str, workspace_id: str, slug: str) -> dict:
         if not sid:
             continue
         sid_q = urllib.parse.quote(str(sid), safe="")
-        st, ctx = request("GET", ws_path(workspace_id, f"/sessions/{sid_q}/context"), token)
-        if st == 200:
+        ctx = optional_get(
+            token,
+            ws_path(workspace_id, f"/sessions/{sid_q}/context"),
+            f"session {sid} context",
+        )
+        if ctx is not None:
             session_context.append({"session_id": sid, "context": ctx})
 
     archive = {
@@ -185,7 +242,7 @@ def build_memory_export(token: str, workspace_id: str, slug: str) -> dict:
         "honcho_base_url": DEFAULT_BASE,
         "peers": peers,
         "sessions": sessions,
-        "messages": messages,
+        "messages_by_session": messages_by_session,
         "conclusions": conclusions,
         "peer_context": peer_context,
         "peer_representations": peer_representations,
@@ -203,6 +260,11 @@ def write_export(path: str, archive: dict) -> None:
         os.chmod(out, 0o600)
     except OSError:
         pass
+
+
+def run_export(token: str, workspace_id: str, slug: str, export_path: str) -> None:
+    archive = build_memory_export(token, workspace_id, slug)
+    write_export(export_path, archive)
 
 
 def get_or_create_workspace(token: str, workspace_id: str, slug: str) -> dict:
@@ -223,7 +285,23 @@ def get_or_create_workspace(token: str, workspace_id: str, slug: str) -> dict:
     return data if isinstance(data, dict) else {"id": workspace_id}
 
 
-def mint_workspace_key(token: str, workspace_id: str) -> str:
+def parse_mint_key_response(data: dict) -> tuple[str, str | None]:
+    secret = None
+    for field in ("key", "api_key", "token", "secret"):
+        if data.get(field):
+            secret = str(data[field])
+            break
+    if not secret:
+        raise SystemExit(f"Honcho create key: unexpected response shape (store key manually): {data!r}")
+    key_id = None
+    for field in ("id", "key_id", "api_key_id"):
+        if data.get(field):
+            key_id = str(data[field])
+            break
+    return secret, key_id
+
+
+def mint_workspace_key(token: str, workspace_id: str) -> tuple[str, str | None]:
     status, data = request(
         "POST",
         "/v3/keys",
@@ -232,11 +310,9 @@ def mint_workspace_key(token: str, workspace_id: str) -> str:
     )
     if status != 200:
         raise SystemExit(f"Honcho create workspace key failed ({status}): {data}")
-    if isinstance(data, dict):
-        for field in ("key", "api_key", "token", "secret"):
-            if data.get(field):
-                return str(data[field])
-    raise SystemExit(f"Honcho create key: unexpected response shape (store key manually): {data!r}")
+    if not isinstance(data, dict):
+        raise SystemExit(f"Honcho create key: expected object, got {data!r}")
+    return parse_mint_key_response(data)
 
 
 def _import_launch_state():
@@ -267,27 +343,132 @@ def state_path_for_slug(slug: str) -> Path:
     return new_path
 
 
+def revoked_keys_log(slug: str) -> Path:
+    client_dir, _ = _import_launch_state()
+    return client_dir(slug) / "revoked_keys.jsonl"
+
+
+def append_revoked_keys(slug: str, key_ids: list[str]) -> None:
+    if not key_ids:
+        return
+    log = revoked_keys_log(slug)
+    entry = {
+        "revoked_at": datetime.now(timezone.utc).isoformat(),
+        "slug": slug,
+        "key_ids": key_ids,
+    }
+    with log.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(entry) + "\n")
+    try:
+        os.chmod(log, 0o600)
+    except OSError:
+        pass
+
+
+def revoke_key_id(token: str, key_id: str) -> None:
+    kid = urllib.parse.quote(key_id, safe="")
+    attempts = [
+        ("DELETE", f"/v3/keys/{kid}"),
+        ("POST", f"/v3/keys/{kid}/revoke"),
+        ("DELETE", f"/v3/keys/{kid}/revoke"),
+    ]
+    last: tuple[int, Any] = (0, {})
+    for method, path in attempts:
+        status, data = request(method, path, token)
+        last = (status, data)
+        if status in (200, 202, 204, 404):
+            return
+    raise HonchoError(f"revoke key {key_id}: all attempts failed; last HTTP {last[0]}: {last[1]!r}")
+
+
+def list_workspace_key_ids(token: str, workspace_id: str) -> list[str]:
+    """Best-effort list of cloud key ids for a workspace (Honcho keys API)."""
+    ids: list[str] = []
+    for path, body in [
+        ("/v3/keys/list", {"filters": {"workspace_id": workspace_id}, "page": 1, "size": 100}),
+        ("/v3/keys/list", {"workspace_id": workspace_id, "page": 1, "size": 100}),
+    ]:
+        status, data = request("POST", path, token, body=body)
+        if status != 200 or not isinstance(data, dict):
+            continue
+        batch = data.get("items") or data.get("keys") or []
+        for row in batch:
+            if isinstance(row, dict) and row.get("id"):
+                ids.append(str(row["id"]))
+        if ids:
+            break
+    return ids
+
+
+def revoke_client_keys(token: str, slug: str, saved: dict) -> list[str]:
+    key_ids: list[str] = []
+    stored_id = (saved.get("client_key_id") or "").strip()
+    if stored_id:
+        key_ids.append(stored_id)
+    else:
+        ws = (saved.get("workspace_id") or "").strip() or slug_to_workspace(slug)
+        key_ids.extend(list_workspace_key_ids(token, ws))
+    revoked: list[str] = []
+    for kid in dict.fromkeys(key_ids):
+        revoke_key_id(token, kid)
+        revoked.append(kid)
+    return revoked
+
+
+def workspace_exists(token: str, workspace_id: str) -> bool:
+    status, _ = request("GET", ws_path(workspace_id, ""), token)
+    return status == 200
+
+
+def wait_workspace_deleted(token: str, workspace_id: str) -> None:
+    deadline = time.time() + WORKSPACE_DELETE_TIMEOUT_S
+    while time.time() < deadline:
+        if not workspace_exists(token, workspace_id):
+            return
+        time.sleep(WORKSPACE_DELETE_POLL_S)
+    raise HonchoError(
+        f"workspace {workspace_id} still present after {WORKSPACE_DELETE_TIMEOUT_S}s "
+        "(async delete did not finish)"
+    )
+
+
+def delete_all_sessions(token: str, workspace_id: str) -> None:
+    for row in list_workspace_items(token, workspace_id, "sessions"):
+        sid = row.get("id")
+        if not sid:
+            raise HonchoError(f"session row missing id during teardown: {row!r}")
+        status, data = request(
+            "DELETE",
+            ws_path(workspace_id, f"/sessions/{urllib.parse.quote(str(sid), safe='')}"),
+            token,
+        )
+        require_http(status, data, f"delete session {sid}", ok=(200, 202, 204, 404))
+
+
 def cmd_provision(args: argparse.Namespace) -> int:
     token = admin_key()
     workspace_id = slug_to_workspace(args.slug)
     sp = state_path_for_slug(args.slug)
 
-    ws = get_or_create_workspace(token, workspace_id, args.slug)
+    get_or_create_workspace(token, workspace_id, args.slug)
     client_key = None
+    client_key_id = None
     if sp.is_file() and not args.remint_key:
         try:
             saved = json.loads(sp.read_text())
             client_key = saved.get("client_key", "").strip() or None
+            client_key_id = saved.get("client_key_id", "").strip() or None
         except (OSError, json.JSONDecodeError):
             client_key = None
     if not client_key:
-        client_key = mint_workspace_key(token, workspace_id)
+        client_key, client_key_id = mint_workspace_key(token, workspace_id)
         sp.write_text(
             json.dumps(
                 {
                     "workspace_id": workspace_id,
                     "slug": args.slug,
                     "client_key": client_key,
+                    "client_key_id": client_key_id,
                     "note": "Ops-only state; store client_key in client 1Password HONCHO_API_KEY",
                 },
                 indent=2,
@@ -306,10 +487,11 @@ def cmd_provision(args: argparse.Namespace) -> int:
         "peer_name": peer_name,
         "ai_peer": "feina-agent",
         "client_key": client_key,
+        "client_key_id": client_key_id,
         "state_file": str(sp),
     }
     if args.json:
-        print(json.dumps(out))
+        print(json.dumps(redact_secrets(out)))
     else:
         print(f"Honcho workspace: {workspace_id}")
         print(f"State file: {sp}")
@@ -321,8 +503,11 @@ def cmd_provision(args: argparse.Namespace) -> int:
 def cmd_export(args: argparse.Namespace) -> int:
     token = admin_key()
     workspace_id = slug_to_workspace(args.slug)
-    archive = build_memory_export(token, workspace_id, args.slug)
-    write_export(args.out, archive)
+    try:
+        run_export(token, workspace_id, args.slug, args.out)
+    except HonchoError as exc:
+        print(f"Honcho export failed: {exc}", file=sys.stderr)
+        return 1
     print(f"Wrote Honcho memory export to {args.out} (no secrets).")
     return 0
 
@@ -337,6 +522,7 @@ def cmd_teardown(args: argparse.Namespace) -> int:
         return 0
 
     export_path = (args.export or "").strip()
+    export_succeeded = False
     if not args.force:
         if not export_path:
             print(
@@ -345,41 +531,61 @@ def cmd_teardown(args: argparse.Namespace) -> int:
             )
             return 1
         try:
-            archive = build_memory_export(token, workspace_id, args.slug)
-            write_export(export_path, archive)
+            run_export(token, workspace_id, args.slug, export_path)
+            export_succeeded = True
             print(f"Honcho memory export OK → {export_path}")
-        except SystemExit:
-            raise
-        except Exception as exc:
+        except HonchoError as exc:
             print(f"Honcho export failed: {exc}", file=sys.stderr)
             return 1
     elif export_path:
         try:
-            archive = build_memory_export(token, workspace_id, args.slug)
-            write_export(export_path, archive)
+            run_export(token, workspace_id, args.slug, export_path)
+            export_succeeded = True
             print(f"Honcho memory export OK → {export_path}")
-        except Exception as exc:
+        except HonchoError as exc:
             print(f"WARN: export failed ({exc}); continuing due to --force", file=sys.stderr)
 
-    for row in list_items(token, workspace_id, "sessions"):
-        sid = row.get("id")
-        if not sid:
-            continue
-        request("DELETE", ws_path(workspace_id, f"/sessions/{urllib.parse.quote(str(sid), safe='')}"), token)
-    status, data = request("DELETE", ws_path(workspace_id, ""), token)
-    if status not in (200, 202, 204, 404):
-        print(f"workspace delete returned {status}: {data}", file=sys.stderr)
+    if not args.force and not export_succeeded:
+        print("Teardown aborted: export did not complete.", file=sys.stderr)
         return 1
+
+    saved: dict = {}
+    if sp.is_file():
+        try:
+            saved = json.loads(sp.read_text())
+        except (OSError, json.JSONDecodeError):
+            saved = {}
+
+    try:
+        if workspace_exists(token, workspace_id):
+            delete_all_sessions(token, workspace_id)
+            status, data = request("DELETE", ws_path(workspace_id, ""), token)
+            require_http(status, data, "delete workspace", ok=(200, 202, 204, 404))
+            if status != 404:
+                wait_workspace_deleted(token, workspace_id)
+    except HonchoError as exc:
+        print(f"Honcho teardown failed: {exc}", file=sys.stderr)
+        return 1
+
+    revoked_ids: list[str] = []
+    try:
+        if saved:
+            revoked_ids = revoke_client_keys(token, args.slug, saved)
+            append_revoked_keys(args.slug, revoked_ids)
+    except HonchoError as exc:
+        print(f"Honcho key revoke failed: {exc}", file=sys.stderr)
+        return 1
+
     if sp.is_file() and not args.keep_state:
         sp.unlink(missing_ok=True)
-    print(f"Honcho workspace {workspace_id} teardown requested (async cascade).")
-    print("Revoke the client workspace key in Honcho dashboard if it still appears.")
+    if revoked_ids:
+        print(f"Revoked workspace key id(s): {', '.join(revoked_ids)}")
+    print(f"Honcho workspace {workspace_id} removed.")
     return 0
 
 
 def cmd_push_config(args: argparse.Namespace) -> int:
     """Push Honcho client config to a client VM via Orgo bash API."""
-    import base64
     import subprocess
 
     orgo_key = os.environ.get("ORGO_API_KEY", "").strip()
@@ -403,8 +609,16 @@ def cmd_push_config(args: argparse.Namespace) -> int:
         "peer_name": args.peer_name or "client",
         "ai_peer": "feina-agent",
     }
-    b64 = base64.b64encode(json.dumps(payload).encode()).decode()
-    remote = f"echo {b64} | base64 -d | python3 /usr/local/bin/feina-honcho-apply.py"
+    payload_json = json.dumps(payload)
+    remote = f"""set -euo pipefail
+install -d -m 700 /run/feina
+cat <<'FEINA_HONCHO_JSON' > /run/feina/honcho-apply.json
+{payload_json}
+FEINA_HONCHO_JSON
+chmod 600 /run/feina/honcho-apply.json
+python3 /usr/local/bin/feina-honcho-apply.py < /run/feina/honcho-apply.json
+rm -f /run/feina/honcho-apply.json
+"""
     subprocess.run(
         [
             "curl",

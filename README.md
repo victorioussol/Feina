@@ -79,7 +79,11 @@ The launcher does **not** auto-purchase or upgrade Orgo capacity.
 
 ### Honcho per-client isolation
 
-Honcho v3 uses **workspaces** as hard isolation boundaries ([architecture](https://honcho.dev/docs/v3/documentation/core-concepts/architecture)). On launch, `ops/feina_honcho.py provision --slug <slug>`:
+Honcho v3 uses **workspaces** as hard isolation boundaries ([architecture](https://honcho.dev/docs/v3/documentation/core-concepts/architecture)).
+
+**Memory derivation vs storage:** Peers, sessions, and message **storage** (plus workspace isolation) work with a workspace-scoped key alone. **Representation / chat-style derived memory** (deriver queue) also needs Honcho **credits** and instance setup on the Honcho side — without it, ingestion works but conclusions/representation can lag. `ops/ready-check.sh` warns when the deriver queue is not draining.
+
+On launch, `ops/feina_honcho.py provision --slug <slug>`:
 
 1. **Get-or-creates** workspace `feina-<slug>` (`POST /v3/workspaces`).
 2. Mints a **workspace-scoped API key** (`POST /v3/keys?workspace_id=...`) so the client VM cannot read other clients' memory.
@@ -100,7 +104,7 @@ ops/offboard-client.sh <computer_id> --slug <slug> \
   --honcho-export /tmp/honcho-<slug>-memory.json --honcho-teardown
 ```
 
-`feina_honcho.py teardown` writes a full JSON archive (peers, sessions, messages, conclusions, context/representation) with **no** `client_key` or secrets, then deletes the workspace. Revoke the client key in the [Honcho dashboard](https://app.honcho.dev/api-keys) if needed.
+`feina_honcho.py teardown` exports session-scoped messages, revokes the workspace key via the keys API (ids logged under `~/.feina/clients/<slug>/revoked_keys.jsonl`), deletes sessions/workspace (polls async delete), with **no** secrets in the archive.
 
 **Limitation:** Workspace-scoped keys cannot access other workspaces; Feina's **admin** key must remain on ops only. Finer peer/session-scoped keys are possible via the same API if you need tighter write boundaries later.
 

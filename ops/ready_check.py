@@ -49,6 +49,40 @@ def expected_workspace(slug: str) -> str:
     return f"feina-{s}"
 
 
+def honcho_deriver_warning() -> tuple[str, str] | None:
+    """Return (level, message) when deriver queue may block representation/chat."""
+    admin = os.environ.get("FEINA_HONCHO_ADMIN_KEY", "").strip()
+    if not admin:
+        return (
+            "WARN",
+            "Honcho deriver queue not checked (set FEINA_HONCHO_ADMIN_KEY on ops to verify processing)",
+        )
+    base = os.environ.get("HONCHO_BASE_URL", "https://api.honcho.dev").rstrip("/")
+    try:
+        req = urllib.request.Request(
+            f"{base}/deriver/metrics",
+            headers={"Authorization": f"Bearer {admin}", "Accept": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            metrics = json.loads(resp.read().decode())
+    except (urllib.error.HTTPError, urllib.error.URLError, json.JSONDecodeError, OSError) as exc:
+        return (
+            "WARN",
+            f"Honcho deriver metrics unavailable ({exc}) — representation/chat may lag; storage/isolation still OK",
+        )
+
+    pending = metrics.get("deriver_queue_items_pending")
+    oldest = metrics.get("deriver_queue_oldest_pending_age_seconds")
+    if pending is not None and int(pending) > 0:
+        extra = f", oldest pending {int(oldest)}s" if oldest is not None else ""
+        return (
+            "WARN",
+            f"Honcho deriver queue not draining ({int(pending)} pending{extra}) — "
+            "enable credits/instance setup for representation & chat memory; raw storage/isolation still work",
+        )
+    return None
+
+
 def vm_check_script(expected_ws: str) -> str:
     import base64
 
@@ -140,6 +174,13 @@ def main() -> int:
         print(f"[{tag}] {label}")
         if not ok:
             fail = 1
+
+    deriver = honcho_deriver_warning()
+    if deriver:
+        level, msg = deriver
+        print(f"[{level}] {msg}")
+    else:
+        print("[PASS] Honcho deriver queue processing (no backlog)")
 
     print()
     if fail:
