@@ -61,7 +61,21 @@ export FEINA_HONCHO_ADMIN_KEY=...   # Honcho admin; ops only
 ./ops/launch-client.sh <workspace_id> <slug> 8 2
 ```
 
-The script **lists workspace computers and account capacity** first. If there is no free slot it exits with **`needs human approval: no free slot`** — it does **not** auto-purchase or upgrade Orgo capacity.
+**Phased, resumable launch** (`ops/feina_launch.py` via `launch-client.sh`):
+
+| Phase | What | State |
+|-------|------|--------|
+| **A** | Honcho workspace + scoped key (no Orgo computer) | `~/.feina/clients/<slug>/` |
+| **B** | Orgo `/account/capacity` preflight | exit **2** if no slot (Phase A kept) |
+| **C** | Create VM, bootstrap, `push-config` Honcho | `launch.json` tracks `computer_id` |
+
+Re-run skips completed phases. If there is no free slot:
+
+`Unable to create the new Orgo computer for <slug>: no free slot. Buy or free a computer in Orgo, then re-run.`
+
+The launcher does **not** auto-purchase or upgrade Orgo capacity.
+
+**Day before the meeting:** `ops/ready-check.sh <slug>` — pass/fail checklist (VM running, bootstrap, Codex auth, Telegram/gateway, Honcho workspace, AgentMail/Latitude, safety-check, no Orgo/OpenAI API keys on the client).
 
 ### Honcho per-client isolation
 
@@ -69,7 +83,7 @@ Honcho v3 uses **workspaces** as hard isolation boundaries ([architecture](https
 
 1. **Get-or-creates** workspace `feina-<slug>` (`POST /v3/workspaces`).
 2. Mints a **workspace-scoped API key** (`POST /v3/keys?workspace_id=...`) so the client VM cannot read other clients' memory.
-3. Stores ops state under `~/.feina/honcho-clients/` (mode `600`).
+3. Stores ops state under `~/.feina/clients/<slug>/honcho.json` (mode `600`).
 
 Copy the **workspace-scoped** key into the client's 1Password `HONCHO_API_KEY` field. After bootstrap:
 

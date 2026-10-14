@@ -24,7 +24,9 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_BASE = os.environ.get("HONCHO_BASE_URL", "https://api.honcho.dev").rstrip("/")
-STATE_DIR = Path(os.environ.get("FEINA_HONCHO_STATE_DIR", os.path.expanduser("~/.feina/honcho-clients")))
+LEGACY_STATE_DIR = Path(
+    os.environ.get("FEINA_HONCHO_STATE_DIR", os.path.expanduser("~/.feina/honcho-clients"))
+)
 SECRET_FIELD_RE = re.compile(
     r"(api[_-]?key|client[_-]?key|secret|token|password|authorization|bearer)$",
     re.I,
@@ -237,15 +239,38 @@ def mint_workspace_key(token: str, workspace_id: str) -> str:
     raise SystemExit(f"Honcho create key: unexpected response shape (store key manually): {data!r}")
 
 
-def state_path(workspace_id: str) -> Path:
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    return STATE_DIR / f"{workspace_id}.json"
+def _import_launch_state():
+    ops = Path(__file__).resolve().parent
+    if str(ops) not in sys.path:
+        sys.path.insert(0, str(ops))
+    from feina_launch_state import client_dir, honcho_path
+
+    return client_dir, honcho_path
+
+
+def state_path_for_slug(slug: str) -> Path:
+    client_dir, honcho_path = _import_launch_state()
+    new_path = honcho_path(slug)
+    workspace_id = slug_to_workspace(slug)
+    legacy = LEGACY_STATE_DIR / f"{workspace_id}.json"
+    if new_path.is_file():
+        return new_path
+    if legacy.is_file():
+        client_dir(slug)
+        try:
+            new_path.write_text(legacy.read_text())
+            os.chmod(new_path, 0o600)
+        except OSError:
+            return legacy
+        return new_path
+    client_dir(slug)
+    return new_path
 
 
 def cmd_provision(args: argparse.Namespace) -> int:
     token = admin_key()
     workspace_id = slug_to_workspace(args.slug)
-    sp = state_path(workspace_id)
+    sp = state_path_for_slug(args.slug)
 
     ws = get_or_create_workspace(token, workspace_id, args.slug)
     client_key = None
@@ -305,7 +330,7 @@ def cmd_export(args: argparse.Namespace) -> int:
 def cmd_teardown(args: argparse.Namespace) -> int:
     token = admin_key()
     workspace_id = slug_to_workspace(args.slug)
-    sp = state_path(workspace_id)
+    sp = state_path_for_slug(args.slug)
 
     if args.dry_run:
         print(f"dry-run: would export (if --export) and delete workspace {workspace_id}")
@@ -364,7 +389,7 @@ def cmd_push_config(args: argparse.Namespace) -> int:
     cid = args.computer_id
 
     workspace_id = slug_to_workspace(args.slug)
-    sp = state_path(workspace_id)
+    sp = state_path_for_slug(args.slug)
     if not sp.is_file():
         raise SystemExit(f"No Honcho state for {workspace_id}; run provision first")
     saved = json.loads(sp.read_text())
