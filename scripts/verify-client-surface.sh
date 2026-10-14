@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 FILES_DIR="$ROOT/files"
 
-python3 -m py_compile build_template.py files/op-enable.py files/telegram-pair.py files/feina-enable.py files/feina-honcho-sync.py files/feina-telegram-pending.py
+python3 -m py_compile build_template.py files/op-enable.py files/telegram-pair.py files/feina-enable.py files/feina-honcho-sync.py files/feina-honcho-apply.py files/feina-telegram-pending.py ops/feina_honcho.py
 python3 -c "import yaml; yaml.safe_load(open('files/config.yaml'))"
 python3 build_template.py
 
@@ -85,6 +85,10 @@ if ! grep -q 'setup-pre' "$FILES_DIR/feina-onboard.sh" && ! grep -q 'allow-teleg
 fi
 if ! grep -q 'account/capacity' "$ROOT/ops/launch-client.sh"; then
   echo "launch-client.sh must preflight Orgo capacity (no auto-purchase)" >&2
+  exit 1
+fi
+if ! grep -q 'feina_honcho.py' "$ROOT/ops/launch-client.sh"; then
+  echo "launch-client.sh must provision per-client Honcho workspaces" >&2
   exit 1
 fi
 if rg -n '^OPENAI_API_KEY=' "$FILES_DIR/hermes.env" 2>/dev/null; then

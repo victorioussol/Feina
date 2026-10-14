@@ -11,8 +11,17 @@ RAM="${3:-8}"
 CPU="${4:-2}"
 NAME="feina-${SLUG}"
 REF="${FEINA_STACK_REF:-feina}"
+OPS_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 auth_hdr=(-H "Authorization: Bearer ${API_KEY}" -H "Content-Type: application/json")
+
+# Honcho: one isolated workspace per client (ops admin key only).
+if [ -n "${FEINA_HONCHO_ADMIN_KEY:-${HONCHO_ADMIN_API_KEY:-}}" ]; then
+  echo "=== Honcho per-client workspace (provision) ==="
+  python3 "${OPS_DIR}/feina_honcho.py" provision --slug "${SLUG}"
+else
+  echo "WARN: FEINA_HONCHO_ADMIN_KEY not set — skipping Honcho workspace provision."
+fi
 
 python3 - "$API_BASE" "$API_KEY" "$WORKSPACE_ID" "$RAM" "$CPU" "$NAME" <<'PY'
 import json, sys, urllib.error, urllib.request
@@ -119,4 +128,9 @@ echo ""
 echo "Done. Next (Feina pre-setup on the VM):"
 echo "  tail -f /var/log/feina-bootstrap.log"
 echo "  feina-onboard setup-pre"
+if [ -n "${FEINA_HONCHO_ADMIN_KEY:-${HONCHO_ADMIN_API_KEY:-}}" ]; then
+  echo "After bootstrap, push isolated Honcho config to the VM:"
+  echo "  python3 ${OPS_DIR}/feina_honcho.py push-config --slug ${SLUG} --computer-id ${CID}"
+  echo "Copy the workspace-scoped HONCHO_API_KEY into the client's 1Password vault (never the admin key)."
+fi
 echo "Computer id: $CID"

@@ -104,10 +104,11 @@ PRE_SETUP_DOC=$(cat <<'EOF'
      feina-onboard telegram <bot_token>
    Optional: feina-onboard telegram-qr "Client Name · Feina"
    Test: feina-onboard gateway-test
-4. Feina-only secrets (client vault / 1Password):
-     feina-onboard op-token <ops_...>     # Honcho, AgentMail, Latitude via map
-   Or paste individually:
-     feina-onboard honcho <key>
+4. Honcho + Feina-only secrets (client vault / 1Password):
+   Ops provisions isolated Honcho workspace feina-<slug> + workspace-scoped key at launch.
+     feina-onboard op-token <ops_...>     # includes per-client HONCHO_API_KEY
+   Or: feina-onboard honcho <workspace-scoped-key>
+   Ops after bootstrap: python3 ops/feina_honcho.py push-config --slug <slug> --computer-id <id>
      feina-onboard agentmail <am_...> [inbox]
      feina-onboard latitude <key> <project>
 5. Safety gate before the meeting:
@@ -270,7 +271,12 @@ case "$cmd" in
     supervisorctl restart hermes-gateway 2>/dev/null || true
     ;;
   honcho)
-    append_env HONCHO_API_KEY "${1:?honcho api key}"
+    append_env HONCHO_API_KEY "${1:?honcho workspace-scoped api key}"
+    python3 /usr/local/bin/feina-honcho-sync.py 2>/dev/null || true
+    supervisorctl restart hermes-gateway 2>/dev/null || true
+    ;;
+  honcho-apply)
+    python3 /usr/local/bin/feina-honcho-apply.py
     python3 /usr/local/bin/feina-honcho-sync.py 2>/dev/null || true
     supervisorctl restart hermes-gateway 2>/dev/null || true
     ;;
@@ -313,7 +319,7 @@ PY
     if [ -f /var/lib/orgo/feina-honcho-disabled ]; then
       echo "Honcho memory: disabled via feina disable honcho"
     elif [ -n "${HONCHO_API_KEY:-}" ]; then
-      echo "Honcho memory: key present (provider syncs on gateway start)"
+      echo "Honcho memory: key present (workspace ${HONCHO_WORKSPACE_ID:-from honcho.json})"
     else
       echo "Honcho memory: no HONCHO_API_KEY (gateway runs without Honcho until key is set)"
     fi

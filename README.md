@@ -53,14 +53,35 @@ AgentPhone, AgentCard, vidIQ, X, IdeaBrowser, Spotify, alternate model providers
 
 ## Launch a new client (ops)
 
-Requires an **account-wide** `ORGO_API_KEY` on your ops machine.
+Requires an **account-wide** `ORGO_API_KEY` on your ops machine. For Honcho isolation, also set **`FEINA_HONCHO_ADMIN_KEY`** (Honcho admin key — **never** on client VMs).
 
 ```bash
 export ORGO_API_KEY=sk_live_...
+export FEINA_HONCHO_ADMIN_KEY=...   # Honcho admin; ops only
 ./ops/launch-client.sh <workspace_id> <slug> 8 2
 ```
 
 The script **lists workspace computers and account capacity** first. If there is no free slot it exits with **`needs human approval: no free slot`** — it does **not** auto-purchase or upgrade Orgo capacity.
+
+### Honcho per-client isolation
+
+Honcho v3 uses **workspaces** as hard isolation boundaries ([architecture](https://honcho.dev/docs/v3/documentation/core-concepts/architecture)). On launch, `ops/feina_honcho.py provision --slug <slug>`:
+
+1. **Get-or-creates** workspace `feina-<slug>` (`POST /v3/workspaces`).
+2. Mints a **workspace-scoped API key** (`POST /v3/keys?workspace_id=...`) so the client VM cannot read other clients' memory.
+3. Stores ops state under `~/.feina/honcho-clients/` (mode `600`).
+
+Copy the **workspace-scoped** key into the client's 1Password `HONCHO_API_KEY` field. After bootstrap:
+
+```bash
+python3 ops/feina_honcho.py push-config --slug <slug> --computer-id <computer_id>
+```
+
+This writes `~/.hermes/honcho.json` (workspace + peers) and `HONCHO_API_KEY` / `HONCHO_WORKSPACE_ID` on the VM.
+
+**Offboard:** `ops/offboard-client.sh <computer_id> --slug <slug> --honcho-export /tmp/honcho-meta.json --honcho-teardown` deletes sessions + workspace (async). Revoke the client key in the [Honcho dashboard](https://app.honcho.dev/api-keys) if needed.
+
+**Limitation:** Workspace-scoped keys cannot access other workspaces; Feina's **admin** key must remain on ops only. Finer peer/session-scoped keys are possible via the same API if you need tighter write boundaries later.
 
 Then on the VM (pre-setup):
 
