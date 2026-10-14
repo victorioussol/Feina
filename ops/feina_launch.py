@@ -131,29 +131,20 @@ def wait_running(api_base: str, api_key: str, computer_id: str) -> None:
     print("WARN: computer not running yet — re-run launch to continue", file=sys.stderr)
 
 
-def orgo_bash(api_base: str, api_key: str, computer_id: str, command: str) -> str:
-    out = orgo_request(
-        api_base,
-        api_key,
-        "POST",
-        f"/computers/{computer_id}/bash",
-        {"command": command},
-    )
-    if isinstance(out, dict):
-        return str(out.get("output") or out.get("stdout") or "")
-    return str(out)
-
-
 def remote_test(api_base: str, api_key: str, computer_id: str, shell_cmd: str) -> bool:
+    from orgo_bash import OrgoBashError, orgo_bash
+
     wrapped = f"bash -lc \"{shell_cmd} && echo FEINA_CHECK_OK\""
     try:
         raw = orgo_bash(api_base, api_key, computer_id, wrapped)
-    except urllib.error.HTTPError:
+    except (urllib.error.HTTPError, OrgoBashError):
         return False
     return "FEINA_CHECK_OK" in raw
 
 
 def start_bootstrap(api_base: str, api_key: str, computer_id: str, ref: str) -> None:
+    from orgo_bash import orgo_bash
+
     remote = (
         "mkdir -p /opt/feina-stack && "
         f"(test -d /opt/feina-stack/src/.git || git clone --depth 1 -b {ref} "
@@ -271,6 +262,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             ],
             check=True,
         )
+        # push-config verifies feina-onboard status on the VM before exiting 0
         phases_c["honcho_pushed"] = True
         phases_c["completed_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         state.setdefault("phases", {})["c"] = phases_c

@@ -33,7 +33,7 @@ SECRET_FIELD_RE = re.compile(
     re.I,
 )
 EXPORT_VERSION = 2
-WORKSPACE_DELETE_TIMEOUT_S = int(os.environ.get("FEINA_HONCHO_WORKSPACE_DELETE_TIMEOUT", "120"))
+WORKSPACE_DELETE_TIMEOUT_S = int(os.environ.get("FEINA_HONCHO_WORKSPACE_DELETE_TIMEOUT", "300"))
 WORKSPACE_DELETE_POLL_S = 5
 SCOPED_KEY_REVOKE_NOTICE = (
     "Scoped key cannot be revoked via API; revoke/rotate in the Honcho dashboard "
@@ -503,30 +503,25 @@ def cmd_teardown(args: argparse.Namespace) -> int:
     return 0
 
 
-def orgo_computer_bash(
+def verify_honcho_on_vm(
     api_base: str,
     orgo_key: str,
     computer_id: str,
-    command: str,
-    stdin_payload: str | None = None,
+    workspace_id: str,
 ) -> None:
-    url = f"{api_base.rstrip('/')}/computers/{computer_id}/bash"
-    body: dict[str, Any] = {"command": command}
-    if stdin_payload is not None:
-        body["stdin"] = stdin_payload
-    data = json.dumps(body).encode()
-    req = urllib.request.Request(
-        url,
-        data=data,
-        headers={
-            "Authorization": f"Bearer {orgo_key}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        },
-        method="POST",
+    from orgo_bash import OrgoBashError, orgo_bash
+
+    cmd = (
+        "set -euo pipefail\n"
+        f"feina-onboard status 2>/dev/null | grep -qF 'workspace {workspace_id}'"
     )
-    with urllib.request.urlopen(req, timeout=180):
-        return
+    try:
+        orgo_bash(api_base, orgo_key, computer_id, cmd)
+    except OrgoBashError as exc:
+        raise SystemExit(
+            f"Honcho push verification failed on VM (expected workspace {workspace_id} in "
+            f"feina-onboard status): {exc}"
+        ) from exc
 
 
 def cmd_push_config(args: argparse.Namespace) -> int:
@@ -552,6 +547,8 @@ def cmd_push_config(args: argparse.Namespace) -> int:
         "peer_name": args.peer_name or "client",
         "ai_peer": "feina-agent",
     }
+    from orgo_bash import orgo_bash
+
     payload_json = json.dumps(payload)
     receiver = "python3 /usr/local/bin/feina-honcho-push-receive.py"
     heredoc_cmd = (
@@ -563,14 +560,9 @@ def cmd_push_config(args: argparse.Namespace) -> int:
     if "base64" in heredoc_cmd.lower():
         raise SystemExit("internal error: push-config must not use base64 on the VM")
 
-    try:
-        orgo_computer_bash(api_base, orgo_key, cid, receiver, stdin_payload=payload_json)
-    except urllib.error.HTTPError as exc:
-        if exc.code in (400, 404, 422, 501):
-            orgo_computer_bash(api_base, orgo_key, cid, heredoc_cmd)
-        else:
-            raise
-    print(f"Pushed Honcho config to computer {cid} (workspace {workspace_id}).")
+    orgo_bash(api_base, orgo_key, cid, heredoc_cmd)
+    verify_honcho_on_vm(api_base, orgo_key, cid, workspace_id)
+    print(f"Pushed Honcho config to computer {cid} (workspace {workspace_id}, verified on VM).")
     return 0
 
 

@@ -13,6 +13,7 @@ OPS = Path(__file__).resolve().parent
 sys.path.insert(0, str(OPS))
 
 from feina_launch_state import load_launch, safe_slug  # noqa: E402
+from orgo_bash import OrgoBashError, orgo_bash  # noqa: E402
 
 
 def orgo_get(api_base: str, key: str, path: str) -> dict:
@@ -22,26 +23,6 @@ def orgo_get(api_base: str, key: str, path: str) -> dict:
     )
     with urllib.request.urlopen(req, timeout=60) as resp:
         return json.loads(resp.read().decode())
-
-
-def orgo_bash(api_base: str, key: str, computer_id: str, command: str) -> str:
-    url = f"{api_base.rstrip('/')}/computers/{computer_id}/bash"
-    body = json.dumps({"command": command}).encode()
-    req = urllib.request.Request(
-        url,
-        data=body,
-        headers={
-            "Authorization": f"Bearer {key}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        },
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=180) as resp:
-        data = json.loads(resp.read().decode() or "{}")
-    if isinstance(data, dict):
-        return str(data.get("output") or data.get("stdout") or "")
-    return str(data)
 
 
 def expected_workspace(slug: str) -> str:
@@ -156,9 +137,9 @@ def main() -> int:
 
     try:
         out = orgo_bash(api_base, api_key, computer_id, vm_check_script(expected))
-    except urllib.error.HTTPError as exc:
+    except (urllib.error.HTTPError, OrgoBashError) as exc:
         out = ""
-        results.append((False, f"VM remote checks (Orgo bash HTTP {exc.code})"))
+        results.append((False, f"VM remote checks (Orgo bash failed: {exc})"))
     else:
         if not out.strip():
             results.append((False, "VM remote checks (empty output)"))
