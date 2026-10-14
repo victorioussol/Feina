@@ -210,7 +210,6 @@ curl -sS -H "Authorization: Bearer $AGENTMAIL_API_KEY" \
   "https://api.agentmail.to/v0/lists/send/block/user@domain.com"
 # 200 + reason "bounced" or "Unsubscribed via List-Unsubscribe" → suppressed; 404 → not blocked
 # If JSON has read_only:true, DELETE returns 409 — do not loop; fall back to the client Gmail Composio
-# Known: opticalresourcesgroup@gmail.com (Mark/ORG) is read-only List-Unsubscribe; use ${OWNER_EMAIL} Gmail for Mark approval packs
 # 413 on send: compress attachments to email JPEG or Drive-link large packs
 
 # Only if address is known-good AND not read_only:

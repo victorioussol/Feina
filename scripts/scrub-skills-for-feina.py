@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-off scrub: remove skill files that cannot pass Feina verify patterns."""
+"""DEPRECATED — use scripts/feina-scrub-restored-skills.py (line scrub) instead of deleting files."""
 import os
 import re
 from pathlib import Path

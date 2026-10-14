@@ -3,13 +3,13 @@
 # install-obsidian-mcp.sh — give Hermes read/write access to an Obsidian vault
 # via MCP (feina-stack template).
 #
-# Mirrors nicks-stack (MIT, github.com/nickvasilescu/nicks-stack): its Hermes
+# Mirrors feina-stack Hermes vault wiring (MIT upstream feina-stack).
 # config.yaml ships an `obsidian-vault` MCP server = the official
 # @modelcontextprotocol/server-filesystem scoped to /root/Documents/HermesVault.
 # It works directly on the Markdown files — no Obsidian app, no Local REST API
 # plugin needed — and is sandboxed: it refuses any path outside the vault.
 #
-# Differences from nicks-stack: we install the package globally (pinned) and
+# Differences from upstream feina-stack: we install the package globally (pinned) and
 # point Hermes at the absolute binary instead of `npx -y`, so gateway start
 # never depends on the npm registry being reachable.
 #

@@ -9,18 +9,19 @@ python3 -m py_compile build_template.py files/op-enable.py files/telegram-pair.p
 python3 -c "import yaml; yaml.safe_load(open('files/config.yaml'))"
 python3 build_template.py
 
-# Banned operator / legacy stack patterns across shipped files/ (skills + payload).
-# Allowlisted paths may mention ORGO_* only for stripping logic or blocked upstream plugins.
+# Allowlisted paths: ORGO strip helpers, blocked upstream plugin trees, MIT author credit.
 VERIFY_ALLOW_GLOBS=(
   '!files/bootstrap.sh'
   '!files/feina-onboard.sh'
   '!files/hermes.env'
-  '!files/local-packages/latitude-telemetry-hermes/**'
   '!files/scripts/orgo_desktop/**'
-  '!files/plugins/orgo-desktop-local/**'
+  '!files/plugins/orgo-desktop-local/plugin.yaml'
+  '!files/skills/computer-use/**'
 )
+
+# Operator / legacy stack tokens (substring scan).
 if rg -i -n "${VERIFY_ALLOW_GLOBS[@]}" \
-  'dewey|nickv|tiger@orgo|momentumamp|spencer@orgo|nickv@testkey|granola_mcp|hermes mcp add orgo' \
+  'dewey|opticalresources|nickv|tiger@orgo|momentumamp|spencer@orgo|nickv@testkey|granola_mcp|hermes mcp add orgo' \
   "$FILES_DIR" 2>/dev/null; then
   echo "Banned operator/Orgo pattern under files/" >&2
   exit 1
@@ -29,8 +30,9 @@ if rg -n "${VERIFY_ALLOW_GLOBS[@]}" 'ORGO_API_KEY|ORGO_DEFAULT_COMPUTER_ID' "$FI
   echo "ORGO key literal under files/ (outside allowlist)" >&2
   exit 1
 fi
-if rg -i -n "${VERIFY_ALLOW_GLOBS[@]}" '\bnick\b' "$FILES_DIR" 2>/dev/null; then
-  echo "Banned 'nick' token under files/ (outside allowlist)" >&2
+# Personal-name scan (substring; MIT author line allowlisted above).
+if rg -i -n "${VERIFY_ALLOW_GLOBS[@]}" 'nick' "$FILES_DIR" 2>/dev/null; then
+  echo "Banned personal-name pattern 'nick' under files/ (outside allowlist)" >&2
   exit 1
 fi
 

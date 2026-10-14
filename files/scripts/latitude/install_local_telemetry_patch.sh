@@ -4,7 +4,7 @@ set -euo pipefail
 
 VENV_PY="/usr/local/lib/hermes-agent/venv/bin/python"
 PKG_DIR="/root/.hermes/local-packages/latitude-telemetry-hermes"
-VALIDATE="/root/.hermes/scripts/latitude/dewey_observability_validate.py"
+VALIDATE="/root/.hermes/scripts/latitude/feina_observability_validate.py"
 CORE_LOOP="/usr/local/lib/hermes-agent/agent/conversation_loop.py"
 API_HOOKS="/usr/local/lib/hermes-agent/agent/api_request_hooks.py"
 
