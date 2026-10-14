@@ -11,7 +11,7 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 export HOME=/root
 export HERMES_HOME=/root/.hermes
-export PATH=/usr/local/bin:/root/.hermes/bin:/root/.hermes/node/bin:/root/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH
+export PATH=/usr/local/bin:/root/.hermes/bin:/root/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH
 
 HERMES_INSTALL_COMMIT="71d34bad1045610252eda02ee79549436896e784"
 STAGE="/opt/feina-stack/stage"
@@ -31,6 +31,32 @@ if ! command -v hermes >/dev/null 2>&1; then
 else
   echo "Hermes already installed: $(hermes --version 2>/dev/null || true)"
 fi
+
+# Hermes ships Node under ~/.hermes/tools/node-*/bin (not always ~/.hermes/node/bin).
+_feina_path_src=/opt/feina-stack/src/files/feina-hermes-path.sh
+if [ -f "$_feina_path_src" ]; then
+  # shellcheck disable=SC1090
+  . "$_feina_path_src"
+fi
+if [ -f /usr/local/bin/feina-hermes-path.sh ]; then
+  # shellcheck disable=SC1091
+  . /usr/local/bin/feina-hermes-path.sh
+fi
+if ! command -v feina_prepend_hermes_node_path >/dev/null 2>&1; then
+  feina_prepend_hermes_node_path() {
+    local d
+    if [ -n "${HERMES_HOME:-}" ] && [ -d "$HERMES_HOME/tools" ]; then
+      for d in "$HERMES_HOME"/tools/node-*/bin; do
+        if [ -d "$d" ]; then export PATH="$d:$PATH"; return 0; fi
+      done
+    fi
+    if [ -n "${HERMES_HOME:-}" ] && [ -d "$HERMES_HOME/node/bin" ]; then
+      export PATH="$HERMES_HOME/node/bin:$PATH"
+    fi
+  }
+fi
+feina_prepend_hermes_node_path 2>/dev/null || true
+hash -r 2>/dev/null || true
 
 # 2) 1Password CLI (secret plane)
 if ! command -v op >/dev/null 2>&1; then
@@ -80,7 +106,9 @@ if [ -f /opt/feina-stack/payload.tgz.b64 ]; then
 elif [ -f /opt/feina-stack/src/files/config.yaml ]; then
   SRC=/opt/feina-stack/src/files
   mkdir -p "$STAGE/hermes"
-  cp -f "$SRC/config.yaml" "$SRC/SOUL.md" "$SRC/hermes.env" "$STAGE/hermes/"
+  cp -f "$SRC/config.yaml" "$SRC/SOUL.md" "$STAGE/hermes/"
+  cp -f "$SRC/hermes.env" "$STAGE/hermes/env"
+  cp -f "$SRC/feina-hermes-path.sh" "$STAGE/"
   cp -rf "$SRC/plugins/." "$STAGE/hermes/plugins/" 2>/dev/null || true
   cp -rf "$SRC/skills/." "$STAGE/hermes/skills/" 2>/dev/null || true
   cp -rf "$SRC/scripts/." "$STAGE/hermes/scripts/" 2>/dev/null || true
@@ -170,6 +198,7 @@ for pair in \
   "gateway-run.sh:/usr/local/bin/hermes-gateway-run.sh" \
   "agentphone-bridge-run.sh:/usr/local/bin/feina-stack-agentphone-bridge-run.sh" \
   "feina-onboard.sh:/usr/local/bin/feina-onboard.sh" \
+  "feina-hermes-path.sh:/usr/local/bin/feina-hermes-path.sh" \
   "feina-enable.py:/usr/local/bin/feina-enable.py" \
   "feina-honcho-sync.py:/usr/local/bin/feina-honcho-sync.py" \
   "feina-honcho-apply.py:/usr/local/bin/feina-honcho-apply.py" \
@@ -183,6 +212,10 @@ for pair in \
     if [ -f "$base" ]; then install -m 0755 "$base" "$dst"; break; fi
   done
 done
+
+if [ -x /usr/local/bin/feina-onboard.sh ] && [ ! -e /usr/local/bin/feina-onboard ]; then
+  ln -sf /usr/local/bin/feina-onboard.sh /usr/local/bin/feina-onboard
+fi
 
 supervisorctl restart hermes-gateway 2>/dev/null || true
 

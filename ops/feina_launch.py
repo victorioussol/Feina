@@ -162,7 +162,7 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     slug = safe_slug(args.slug)
     name = f"feina-{slug}"
-    ref = os.environ.get("FEINA_STACK_REF", "feina")
+    ref = os.environ.get("FEINA_STACK_REF", "main")
     state = load_launch(slug)
     state["slug"] = slug
     state["orgo_workspace_id"] = args.workspace_id
@@ -235,7 +235,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         save_launch(slug, state)
 
     boot_cmd = (
-        "command -v hermes >/dev/null && test -f /usr/local/bin/feina-onboard.sh && "
+        "test -x /root/.hermes/bin/hermes && test -f /usr/local/bin/feina-onboard && "
         "grep -q 'feina-stack install complete' /var/log/feina-bootstrap.log"
     )
     if not phases_c.get("bootstrap_done"):

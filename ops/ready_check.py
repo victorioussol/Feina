@@ -74,7 +74,7 @@ ok() {{ echo "VM_PASS:$1"; }}
 bad() {{ echo "VM_FAIL:$1"; FAIL=1; }}
 EXPECTED={expected_ws!r}
 
-if command -v hermes >/dev/null && test -f /usr/local/bin/feina-onboard.sh && grep -q 'feina-stack install complete' /var/log/feina-bootstrap.log 2>/dev/null; then
+if [ -x /root/.hermes/bin/hermes ] && test -f /usr/local/bin/feina-onboard && grep -q 'feina-stack install complete' /var/log/feina-bootstrap.log 2>/dev/null; then
   ok bootstrap
 else
   bad bootstrap
@@ -95,9 +95,10 @@ if [ "$WS" = "$EXPECTED" ] || [ "$PYWS" = "$EXPECTED" ]; then ok honcho_workspac
 
 if grep -qE '^AGENTMAIL_API_KEY=.' /root/.hermes/.env 2>/dev/null; then ok agentmail; else bad agentmail; fi
 if grep -qE '^LATITUDE_API_KEY=.' /root/.hermes/.env 2>/dev/null; then ok latitude; else bad latitude; fi
+if grep -qE '^COMPOSIO_CONSUMER_KEY=.' /root/.hermes/.env 2>/dev/null; then ok composio; else bad composio; fi
 if grep -qE '^OPENAI_API_KEY=' /root/.hermes/.env /root/.env 2>/dev/null; then bad openai_api_key; else ok openai_api_key; fi
 if grep -rE '^ORGO_API_KEY=|^ORGO_DEFAULT_COMPUTER_ID=' /root/.hermes/.env /root/.env 2>/dev/null | grep -q .; then bad orgo_keys; else ok orgo_keys; fi
-if feina-onboard safety-check >/dev/null 2>&1; then ok safety_check; else bad safety_check; fi
+if /usr/local/bin/feina-onboard safety-check >/dev/null 2>&1; then ok safety_check; else bad safety_check; fi
 exit $FAIL
 """
     b64 = base64.b64encode(script.encode()).decode()

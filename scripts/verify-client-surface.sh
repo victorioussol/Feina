@@ -7,6 +7,15 @@ FILES_DIR="$ROOT/files"
 
 python3 -m py_compile build_template.py files/op-enable.py files/telegram-pair.py files/feina-enable.py files/feina-honcho-sync.py files/feina-honcho-apply.py files/feina-honcho-push-receive.py files/feina-telegram-pending.py ops/feina_honcho.py ops/feina_launch_state.py ops/feina_launch.py ops/ready_check.py ops/orgo_bash.py ops/test_feina_honcho_unit.py ops/test_orgo_bash_unit.py
 PYTHONPATH="$ROOT/ops" python3 -m unittest test_feina_honcho_unit test_orgo_bash_unit -q
+python3 "$ROOT/scripts/test_feina_regressions.py" -q
+if ! grep -q 'FEINA_STACK_REF.*main' "$ROOT/ops/feina_launch.py"; then
+  echo "feina_launch.py must default FEINA_STACK_REF to main" >&2
+  exit 1
+fi
+if [ ! -f "$FILES_DIR/feina-hermes-path.sh" ]; then
+  echo "feina-hermes-path.sh required" >&2
+  exit 1
+fi
 python3 -c "import yaml; yaml.safe_load(open('files/config.yaml'))"
 python3 build_template.py
 
