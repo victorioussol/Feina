@@ -1,8 +1,0 @@
-[Desktop Entry]
-Name=Obsidian
-Comment=Hermes Knowledge Base
-Exec=/usr/local/bin/obsidian-launch
-Icon=obsidian
-Terminal=false
-Type=Application
-Categories=Office;

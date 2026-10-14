@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # ==========================================================================
-# Nick's Stack — flip secrets.onepassword.enabled once a token exists
+# feina-stack — flip secrets.onepassword.enabled once a token exists
 # ==========================================================================
 # The baked config ships the 19-var 1Password map DISABLED (a token-less
 # enabled map makes `op read` prompt on /dev/tty and stall interactive

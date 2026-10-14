@@ -1,2 +1,0 @@
-#!/bin/bash
-exec /opt/Obsidian/obsidian --no-sandbox --disable-gpu "$@"

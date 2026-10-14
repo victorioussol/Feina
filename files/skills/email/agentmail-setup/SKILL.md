@@ -29,7 +29,7 @@ Also covers **Dewey outbound send policy** (always CC Nick, approval rules) and 
 **Nick personal inbox triage — DUAL-SOURCE (+ Granola when asked) mandatory.** If the user asks “what emails have I missed / should I get back to / catch up,” you MUST check BOTH mail sources, and Granola when they also mention meetings/follow-ups:
 
 1. **Composio Gmail FIRST** — `${OWNER_EMAIL}` via Composio `gmail` toolkit (`COMPOSIO_SEARCH_TOOLS` → `GMAIL_LIST_THREADS` / `GMAIL_FETCH_EMAILS` paginated with `page_token` + hydrate in parallel via `COMPOSIO_REMOTE_WORKBENCH` ThreadPoolExecutor). Primary human mail. 200+ unread is normal; filter noisy senders (openrouter receipts, Mia watchdog alerts, Latitude, otter/fireflies/riverside, xfinity, slacks, linkedin). See `references/personal-gmail-triage-via-composio.md`.
-2. **AgentMail SECOND** — `dewey@`, `orgo@`, `org@`, `momentum-amp@`, `ideabrowser@`, `alex_stbl@` via MCP `list_threads`. OTP/card noise usually; surface real human leads and vendor support. AgentMail alone is NEVER sufficient.
+2. **AgentMail SECOND** — the client's dedicated `AGENTMAIL_INBOX` via MCP `list_threads`. OTP noise is common; surface real human leads and vendor support. AgentMail alone is rarely sufficient for all comms.
 3. **Granola MCP (when meetings / follow-ups mentioned)** — Composio toolkit `granola_mcp`. Prefer `GRANOLA_MCP_QUERY_GRANOLA_MEETINGS` for Nick-owned action items. List ranges **serially** (`this_week` / `last_week` / `last_30_days`) — parallel triple list often returns `Rate limit exceeded`.
 
 User correction “why not check composio” = first-class skill signal. Next session must start with both mail sources.
