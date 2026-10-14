@@ -6,7 +6,7 @@ Use when the user wants to fund the AgentCard wallet, or when `fund_wallet` fail
 
 1. Orient with `whoami`, `get_kyc_status`, `get_wallet`, `get_plan`, `list_cards`.
 2. If KYC is not approved, finish KYC first (`references/agentcard-kyc-troubleshooting.md`).
-3. Ensure cardholder phone + terms: `submit_user_info(phone_number E.164, terms_accepted=true)` after explicit user confirmation of phone and terms. Dewey default phone for account flows: `+15555550123` only when the user confirms.
+3. Ensure cardholder phone + terms: `submit_user_info(phone_number E.164, terms_accepted=true)` after explicit user confirmation of phone and terms. Feina ops host default phone for account flows: `+15555550123` only when the user confirms.
 4. Ask for dollar amount (and Apple Pay vs Google Pay if it matters). Convert dollars to cents (`$50` → `5000`). Range: $2–$10,000.
 5. Call `fund_wallet(amount_cents, payment_method?)`. Success should return an Apple Pay / Google Pay **checkout URL** for the user to open. Then poll `get_wallet` after they pay.
 6. Do **not** create cards as a probe for funding health. `create_card` can succeed in sandbox while the live wallet stays unfundable.
@@ -27,7 +27,7 @@ Stripe `setup_payment_method` is for **flights only**. It does not fund the wall
 
 ## KYC approved but `fund_wallet` still says verification required
 
-Observed 2026-07-09 (Dewey / `${AGENTMAIL_INBOX}`):
+Observed 2026-07-09 (Feina ops host / `${AGENTMAIL_INBOX}`):
 
 - `whoami`: KYC verified, account active
 - `get_kyc_status`: verified / approved; `start_kyc` nextStep verified

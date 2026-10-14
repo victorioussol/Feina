@@ -14,7 +14,7 @@ This is expected product auth split, not a broken Hermes MCP wiring.
 
 ## Working split (this host pattern)
 
-- **User context:** `xurl` app profile `hermes-x`, OAuth2 user `nickvasiles`, MCP server `xapi` via `xurl --app hermes-x mcp https://api.x.com/mcp`
+- **User context:** `xurl` app profile `hermes-x`, OAuth2 user `example-channel`, MCP server `xapi` via `xurl --app hermes-x mcp https://api.x.com/mcp`
 - **Docs:** HTTP MCP `x-docs` → `https://docs.x.com/mcp` (no auth)
 - **App-only:** `xurl auth app-only --app hermes-x` + requests with `--auth app`, and/or MCP `xapi-app-only` with bearer from env (`X_APP_ONLY_BEARER_TOKEN`)
 
@@ -28,7 +28,7 @@ xurl --app hermes-x search 'QUERY -is:retweet lang:en' -n 20
 
 Filter metrics client-side; avoid unsupported operators like `min_faves:` when packaging rejects them.
 
-## console.x.com navigation (headed, Dewey)
+## console.x.com navigation (headed, Feina ops host)
 
 | Step | Detail |
 |------|--------|

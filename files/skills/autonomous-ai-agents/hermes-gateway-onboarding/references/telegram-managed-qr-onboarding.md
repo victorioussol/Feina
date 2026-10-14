@@ -113,6 +113,6 @@ nohup hermes gateway run --accept-hooks >> /root/customer-logs/gateway.log 2>&1 
 ## Notes
 
 - Display name free text; username unique + ends in `bot`
-- Never reuse operator/Dewey bot on a customer box
+- Never reuse operator/Feina ops host bot on a customer box
 - Groups need privacy off or admin; DMs simpler
 - Do not print tokens

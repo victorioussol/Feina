@@ -1,6 +1,6 @@
-# IdeaBrowser MCP on Dewey Hermes
+# IdeaBrowser MCP on Feina ops host Hermes
 
-Wire IdeaBrowser's hosted MCP into Hermes (operator Dewey), not customer boxes, unless Nick asks otherwise.
+Wire IdeaBrowser's hosted MCP into Hermes (operator Feina ops host), not customer boxes, unless Feina ops directs otherwise.
 
 ## Credential
 
@@ -97,7 +97,7 @@ Research playbook (ranking, X/market stack, landing-first next step): skill `gro
 
 ## Related
 
-- Field catalog row: parent `SKILL.md` Dewey catalog
+- Field catalog row: parent `SKILL.md` Feina ops host catalog
 - Query-string MCP leak general rule: parent pitfalls
-- Customer IdeaBrowser/Jordan vault work: skill `vault-managed-customer-agents` (product MCP on Dewey is separate from Saddles persona boxes)
+- Customer IdeaBrowser/Jordan vault work: skill `vault-managed-customer-agents` (product MCP on Feina ops host is separate from Saddles persona boxes)
 - Startup ideation method: `grounded-research` / `references/ideabrowser-startup-ideation.md`

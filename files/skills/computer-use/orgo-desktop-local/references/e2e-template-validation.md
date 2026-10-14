@@ -67,7 +67,7 @@ bash install/validate.sh
 ## Do not claim done when
 
 - Only schema validate / metal ready
-- Only Dewey local package test
+- Only Feina ops host local package test
 - WS green but user has not hard-refreshed after restart
 - Interactive plugin prompt blocked bootstrap (log shows "Grant it?")
 - `orgo-tmux-startup.sh` contains `send-keys … bash -l`

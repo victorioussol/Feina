@@ -1,8 +1,9 @@
-# Hermes Knowledge Base
+# Hermes Vault — Feina
 
-This Obsidian vault is the shared knowledge base for the Hermes Agent.
+This folder is the agent's notebook for this client. Hermes reads and writes it via the `obsidian-vault` MCP server.
 
-- **Notes/** — reference material, curated knowledge.
-- **Inbox/** — quick captures / unsorted notes.
+- **Clients/** — context, contacts, decisions
+- **Reports/** — generated reports and summaries
+- **Notes/** — procedures and meeting notes
 
-Hermes reads and writes Markdown files here. Anything you add is searchable by the agent.
+Feina staff may inspect files here; the business owner uses Telegram only.

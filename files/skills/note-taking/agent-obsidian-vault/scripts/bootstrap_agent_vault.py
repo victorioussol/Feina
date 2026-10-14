@@ -269,7 +269,7 @@ def expected_paths(root: Path) -> list[Path]:
     """Return required paths for the detected vault layout.
 
     The default bootstrap layout uses the original compact starter structure.
-    Staged rebuilds may use the Dewey V2 structure, which adds Operations,
+    Staged rebuilds may use the Feina ops host V2 structure, which adds Operations,
     Raw Imports, Migration Reports, and moves People/Research/SOPs to their
     V2 positions. Detect that layout and verify it without forcing duplicate
     compatibility folders into the staged vault.

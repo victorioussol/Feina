@@ -7,7 +7,7 @@ lifecycle/MCP is separate from this loopback control plane.
 ## Topology
 
 ```
-Hermes on Dewey
+Hermes on Feina ops host
   → http://127.0.0.1:8080   (orgo-desktop-api)   AUTH: VNC password
   → Xvnc DISPLAY=:99
 
@@ -60,7 +60,7 @@ Event types (useful waits): `window_focus`, `window_open/close`, `clipboard`,
 
 ## Coords
 
-Full desktop pixels. Dewey default **1280×720**. Window-local vs desktop
+Full desktop pixels. Feina ops host default **1280×720**. Window-local vs desktop
 offsets matter if mixing CUA window crops with Desktop API clicks — prefer
 full-desktop screenshots from this API for click planning.
 

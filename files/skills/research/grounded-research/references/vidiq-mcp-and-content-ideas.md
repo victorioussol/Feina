@@ -1,4 +1,4 @@
-# vidIQ MCP + content ideas (Dewey)
+# vidIQ MCP + content ideas (Feina ops host)
 
 ## Wire-up (verified)
 
@@ -33,9 +33,9 @@ Useful outlier filters: `publishedWithin` (thisWeek…oneYear), `contentType`, `
 
 Direct JSON-RPC (when MCP tools not in-session): POST SSE to MCP URL with `Authorization: Bearer …`, methods `initialize`, `tools/call`.
 
-## Nick content niche (for idea ranking)
+## the operator content niche (for idea ranking)
 
-Orgo (computers for AI agents), Hermes / OpenClaw / Claude Code, agent fleets, AI employees, Grok-as-brain, business-owner self-implementation, personalized production agents (Dewey).
+Orgo (computers for AI agents), Hermes / OpenClaw / Claude Code, agent fleets, AI employees, Grok-as-brain, business-owner self-implementation, personalized production agents (Feina ops host).
 
 High-signal X themes: config/setup (bookmarks), model swaps (Grok speed), fleet/templates, “stop building until…”, comparisons.
 

@@ -179,7 +179,7 @@ For production, prefer a stable named Cloudflare tunnel and hostname over quick 
 public hostname -> named cloudflared tunnel -> localhost:8787 -> /hooks/agentphone
 ```
 
-A working Dewey deployment uses:
+A working Feina ops host deployment uses:
 
 ```text
 https://<random>.trycloudflare.com/hooks/agentphone

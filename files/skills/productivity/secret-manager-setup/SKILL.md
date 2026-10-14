@@ -1,6 +1,6 @@
 ---
 name: secret-manager-setup
-description: "Set up external secret managers for headless agent/Hermes environments, especially 1Password CLI service-account flows and op:// secret references; Dewey vendor key probes; Composio-vs-Hermes boundary; related OAuth status (Anthropic headless PKCE, Spotify, Codex)."
+description: "Set up 1Password service-account flows and op:// secret references for Feina client agents; Composio-vs-Hermes boundary; OpenAI Codex OAuth on headless VMs."
 version: 1.4.1
 author: Hermes Agent
 license: MIT
@@ -59,7 +59,7 @@ Authoritative product docs still win over this skill. For Hermes-specific comman
 
 For a long-running agent VM, ask for or create a 1Password service account with read access to the vault/items containing the agent secrets. The user usually needs to provide the service account token, commonly resembling `ops_...`, and the vault/item/field names or exact `op://...` references.
 
-If the user wants the agent to create the 1Password item from an existing `.env`, the service account needs `read_items,write_items` on a non-personal vault. 1Password service accounts cannot access Personal/Private vaults, so ask the user to create or name a shared/custom vault such as `Dewey`, `Automation`, or `Agent Secrets`.
+If the user wants the agent to create the 1Password item from an existing `.env`, the service account needs `read_items,write_items` on a non-personal vault. 1Password service accounts cannot access Personal/Private vaults, so ask the user to create or name a shared/custom vault such as `Feina - <Client>` or `Agent Secrets`.
 
 Manual account login is possible but inferior for a server because `op signin` sessions are short-lived. Use it for temporary testing only unless the user explicitly wants that trade-off.
 
@@ -86,107 +86,32 @@ When a service-account token is pasted into chat or logs, finish the setup, veri
 - Bundled `github-auth` / `github-repo-management` may be unpatchable in curator mode; keep durable GitHub+1Password procedure **here** and in `vault-managed-customer-agents/references/product-code-repo-recon.md` + `github-collaborator-invites.md` (username API accept vs email Gmail invites).
 - Collaborator invites sent to an **email** may not appear on `GET /user/repository_invitations` for the PAT login — check Gmail before telling the user to re-invite.
 
-## Dewey field catalog (Hermes Agent Secrets)
+## Feina Basic field catalog (Hermes Agent Secrets)
 
-Canonical item: `op://Hermes/Hermes Agent Secrets/<FIELD>`.
+Canonical item: `op://Feina/Hermes Agent Secrets/<FIELD>` (per-client vault name may be `Feina - <Client>` — update references accordingly).
 
-| Env var | 1P field | Shape check | Vendor smoke (require 200) | Notes |
-|---|---|---|---|---|
-| `GITHUB_TOKEN` + `GH_TOKEN` | `GITHUB_PAT` | `ghp_` / `github_pat_` | `GET https://api.github.com/user` Bearer | Map both env names |
-| `LATITUDE_API_KEY` | same | often UUID-like 36 | Latitude API / telemetry path | Historical map |
-| `ORGO_API_KEY` | same | long opaque | Orgo API | Historical map |
-| `TELEGRAM_BOT_TOKEN` | same | bot token shape | Telegram getMe | Historical map |
-| `AGENTMAIL_API_KEY` | same | long opaque | AgentMail | Historical map |
-| `AGENTPHONE_API_KEY` | same | long opaque | AgentPhone | Historical map |
-| `EXA_API_KEY` | same | often UUID-like 36 | `POST https://api.exa.ai/search` Bearer | Native web-exa |
-| `FIRECRAWL_API_KEY` | same | often `fc-…` | `GET https://api.firecrawl.dev/v1/team/credit-usage` Bearer | Enable `web-firecrawl` after map |
-| `BROWSER_USE_API_KEY` | same | often `bu_…` | `GET https://api.browser-use.com/api/v2/tasks` header `X-Browser-Use-API-Key` | Not Bearer |
-| `OPENROUTER_API_KEY` | same | `sk-or-…` | `GET https://openrouter.ai/api/v1/auth/key` Bearer | 1P override wins when enabled |
-| `XAI_API_KEY` | same | `xai-…` | `GET https://api.x.ai/v1/models` Bearer | Parallel to xAI OAuth |
-| `AI_GATEWAY_API_KEY` | `VERCEL_AI_GATEWAY_API_KEY` | `vck_…`; UUID is only the key ID | Authenticated `POST https://ai-gateway.vercel.sh/v1/chat/completions` | `/v1/models` alone is not an auth test; named Hermes provider `custom:vercel-ai-gateway` |
-| `MODEL_API_KEY` | `META_API_KEY` | `LLM|…` (secret redaction may alter the displayed separator) | Authenticated `POST https://api.meta.ai/v1/responses` | Meta Model API; model `muse-spark-1.1`; named Hermes provider `custom:meta-model-api` with `codex_responses` transport |
-| `HONCHO_API_KEY` | same | `hch-…` (often `hch-at-…`) | `hermes memory status` → provider honcho available | Also keep `~/.hermes/honcho.json` hosts.hermes.apiKey; optional non-secret 1P text fields for base URL / workspace |
-| `IDEABROWSER_KEY` | same | `ib_…` (~50 chars) | MCP initialize HTTP 200 + `protocolVersion` (do not print full URL with key) | Hosted MCP uses `?key=${IDEABROWSER_KEY}`; procedure `references/ideabrowser-mcp-hermes.md` |
+| Env var | 1P field | Notes |
+|---|---|---|
+| `OPENROUTER_API_KEY` | same | `sk-or-…`; Basic billing with hard cap |
+| `TELEGRAM_BOT_TOKEN` | same | From QR pairing or BotFather |
+| `AGENTMAIL_API_KEY` | same | Agent inbox |
+| `AGENTMAIL_INBOX` | same | `…@agentmail.to` |
+| `COMPOSIO_CONSUMER_KEY` | same | `ck_…` per client |
+| `LATITUDE_API_KEY` | same | Optional until Feina enables tracing |
+| `LATITUDE_PROJECT` | same | e.g. `feina-vince` |
 
-### Meta Model API / Muse Spark on Dewey
-
-Map the official runtime variable to the existing 1Password field, then register a named Responses-API provider:
-
-```bash
-hermes secrets 1password set MODEL_API_KEY \
-  'op://Hermes/Hermes Agent Secrets/META_API_KEY'
-rm -f ~/.hermes/cache/op_cache.json
-
-hermes config set providers.meta-model-api.name 'Meta Model API'
-hermes config set providers.meta-model-api.api 'https://api.meta.ai/v1'
-hermes config set providers.meta-model-api.key_env 'MODEL_API_KEY'
-hermes config set providers.meta-model-api.transport 'codex_responses'
-hermes config set providers.meta-model-api.default_model 'muse-spark-1.1'
-hermes config set providers.meta-model-api.context_length '1048576'
-```
-
-Use `--provider custom:meta-model-api --model muse-spark-1.1` for an isolated smoke. After a basic response and a real Hermes tool-call loop both pass, make it the default with `model.provider`, `model.default`, and `model.api_mode=codex_responses`, then restart a running gateway.
-
-Direct API pitfall verified 2026-07-09: Meta Responses accepts only `tool_choice: "auto"`; `"required"`, `"none"`, and named choices return HTTP 400. Force tool-use smokes through the prompt rather than `tool_choice: "required"`. Do not add `providers.meta-model-api.max_output_tokens` on Hermes v0.18.2; runtime may lift it, but config normalization warns that it is an unknown provider key.
-
-### Adding a field to an existing 1P item (Dewey)
-
-```bash
-export OP_SERVICE_ACCOUNT_TOKEN=...   # from env, never print
-op item edit "Hermes Agent Secrets" --vault Dewey \
-  "HONCHO_API_KEY[password]=${HONCHO_API_KEY}"
-# optional non-secret metadata as text fields
-op item edit "Hermes Agent Secrets" --vault Dewey \
-  "HONCHO_BASE_URL[text]=https://api.honcho.dev"
-```
-
-Wire Hermes injection under `secrets.onepassword.env` in `config.yaml`:
-
-```yaml
-HONCHO_API_KEY: op://Hermes/Hermes Agent Secrets/HONCHO_API_KEY
-```
-
-`hermes config set secrets.onepassword.env.HONCHO_API_KEY 'op://…'` may fail (nested path treated as env name). Prefer a surgical YAML edit next to the other maps, then:
-
-```bash
-rm -f ~/.hermes/cache/op_cache.json
-hermes memory status   # should log: 1Password: applied N secrets (... HONCHO_API_KEY ...)
-```
-
-Verify with `op read 'op://Hermes/Hermes Agent Secrets/HONCHO_API_KEY'` (metadata only in chat: len/prefix/suffix).
-
-After mapping web/browser keys, enable matching plugins if needed and start a new session so injection + plugin load apply.
-
-Do not invent API-key 1P fields for OAuth-preferred providers on Dewey:
-- OpenAI Codex → `hermes auth` / openai-codex OAuth
-- Anthropic Claude Pro/Max → Anthropic OAuth (not ANTHROPIC_API_KEY by default)
-- Spotify → `hermes auth spotify` + HERMES_SPOTIFY_CLIENT_ID
+**Never map on client computers:** Orgo fleet-control API keys or any other client's secrets.
 
 ## Composio vs Hermes secrets
 
-Composio connections do not export raw credentials for Hermes `secrets.onepassword` maps, `.env`, or `auth.json`. Treat Composio as a parallel tool proxy. Native Hermes plugins need 1Password maps or Hermes OAuth.
+Composio connections do not export raw credentials for Hermes `secrets.onepassword` maps, `.env`, or `auth.json`. Treat Composio as a parallel tool proxy.
 
-## Operator OpenAI Codex OAuth (subscription drain)
+## OpenAI Codex OAuth (Feina client ChatGPT accounts)
 
-When ChatGPT/Codex credits drain mysteriously:
-
-1. Fingerprint local JWT email + account id (never print tokens).
-2. Measure **local** Hermes `state.db` usage by `billing_provider=openai-codex` and `source` (cli/telegram/agentphone-bridge) before blaming customers.
-3. Fleet-scan Orgo Hermes boxes for the same email/account id; scrub customer hits; leave them on OpenRouter/API keys.
-4. Revoke OpenAI sessions if refresh tokens may still exist anywhere.
-
-Full procedure: `references/openai-codex-oauth-fleet-audit.md`.
-Customer isolation: `managed-hermes-on-orgo` → `references/operator-oauth-isolation.md`.
+Use `feina-onboard model-codex` or `hermes auth add openai-codex` on the client VM. Store subscription credentials in `auth.json`, not 1Password, unless Feina policy changes.
 
 ## Useful references
 
-- `references/onepassword-hermes.md` — command sequence, safe reads, GitHub PAT, full setup
-- `references/vercel-ai-gateway-hermes.md` — 1Password mapping, named custom-provider config, `vck_` versus UUID key IDs, and authenticated smoke tests
-- `references/dewey-vendor-key-probes.md` — vendor validation probes (metadata only, never print secrets)
+- `references/onepassword-hermes.md` — command sequence and safe reads
 - `references/composio-vs-hermes-auth.md` — Composio does not export Hermes credentials
-- `references/composio-discordbot-auth.md` — Discordbot BYO OAuth2 props (client_id, client_secret, bot bearer_token); Managed App unavailable
-- `references/anthropic-headless-pkce.md` — Claude Pro/Max OAuth when CLI input EOF-fails
-- `references/spotify-and-oauth-status.md` — Spotify check_fn + Codex/Anthropic status
-- `references/openai-codex-oauth-fleet-audit.md` — JWT fingerprint, fleet scan, scrub, containment
-- `references/ideabrowser-mcp-hermes.md` — IdeaBrowser 1P field, `${IDEABROWSER_KEY}` MCP URL, non-interactive `hermes mcp add`, avoid `mcp test` in transcripts
-- Dewey GitHub field: `op://Hermes/Hermes Agent Secrets/GITHUB_PAT` → `GITHUB_TOKEN` + `GH_TOKEN` only after `GET /user` returns 200
+- `references/openai-codex-oauth-fleet-audit.md` — OAuth usage audit patterns

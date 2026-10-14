@@ -46,7 +46,7 @@ import { Latitude, capture } from "@latitude-data/telemetry"
 ## Generic OTEL env helper shape
 
 ```bash
-export LATITUDE_PROJECT_SLUG=dewey
+export LATITUDE_PROJECT_SLUG=feina-ops
 export LATITUDE_INGEST_URL=https://ingest.latitude.so/v1/traces
 export LATITUDE_SERVICE_NAME=hermes-agent
 export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="$LATITUDE_INGEST_URL"
@@ -78,7 +78,7 @@ These paths are useful examples, not universal requirements:
 /root/.hermes/scripts/latitude/send_test_trace.py
 /root/.hermes/scripts/latitude/env.sh
 /root/.hermes/scripts/latitude/README.md
-/root/dewey-vault-migration/staging/Dewey-Agent-Vault.v3-clean/AI/knowledge/latitude-observability-setup.md
+/root/feina-ops-vault-migration/staging/Feina ops host-Agent-Vault.v3-clean/AI/knowledge/latitude-observability-setup.md
 ```
 
 ## Lessons

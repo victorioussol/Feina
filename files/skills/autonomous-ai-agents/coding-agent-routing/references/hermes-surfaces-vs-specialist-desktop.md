@@ -1,6 +1,6 @@
 # Hermes surfaces vs specialist desktop apps
 
-## What to install for agent stacks (Dewey / Orgo)
+## What to install for agent stacks (Feina ops host / Orgo)
 
 | Want | Install | Skip |
 |------|---------|------|

@@ -1,10 +1,10 @@
-# Latitude implementation patterns learned from Dewey rollout
+# Latitude implementation patterns learned from Feina ops host rollout
 
 Use this reference when moving from Latitude review into implementation: signals, monitors, saved searches, capture/instrumentation, and validation.
 
 ## Auth and API surface
 
-- Latitude API-key auth can create and read user-authored signals and monitors in the Dewey setup.
+- Latitude API-key auth can create and read user-authored signals and monitors in the Feina ops host setup.
 - Saved-search creation may require OAuth user auth even when list/read and project analytics work with an API key. If `createSavedSearch` returns OAuth-required/403, do not loop on argument shape. Use inline monitor targets with `type: savedSearch`, `id: null`, `stream: traces`, `filterSet`, and optional semantic `query` as the fallback.
 - `signals monitor` (attach evaluation) can also return 400 under API-key; leave flagger signals active.
 - When using the `latitude` CLI for API operations, ensure `LATITUDE_BASE_URL` is not pointed at the ingest endpoint. Load `.env` but remove/override `LATITUDE_BASE_URL` if it is an OTLP ingest URL; the CLI should call the Latitude API, not `https://ingest.latitude.so`.
@@ -17,7 +17,7 @@ Full examples and fleet pack: `references/monitors-and-signal-triage.md`.
 
 `--dry-run` is **not** a schema guarantee: it can accept nested-rule bodies that still fail live create. Always verify with a real create + `monitors list` read-back.
 
-High-volume fleets: use `errorRate` for error spikes, not Dewey-style absolute count of 5 on all traces.
+High-volume fleets: use `errorRate` for error spikes, not Feina ops host-style absolute count of 5 on all traces.
 
 If a project already has dozens of auto-flagger signals and **zero** monitors: create the five ops monitors and triage escalating signals. Do not invent more signals first.
 
@@ -47,7 +47,7 @@ Latitude has two related surfaces:
 - Trace rows expose raw fields such as `durationNs`, `tokensTotal`, and `costTotalMicrocents`.
 - Analytics/monitor metrics use abstract fields `duration`, `tokens`, and `cost`.
 
-Do not blindly copy row-field units into metric thresholds. Validate with `queryAnalytics` before finalizing monitor thresholds. In the Dewey rollout, `metric: {kind: "max", field: "cost"}` returned dollar-denominated values, so high-cost thresholds are dollars (`0.25`), not microcents (`250000`). `metric: {kind: "max", field: "duration"}` returned second-denominated values, so slow-run thresholds are seconds (`120`), not nanoseconds (`120000000000`). `metric: {kind: "max", field: "tokens"}` returns token counts, so `1000000` is the right 1M-token threshold.
+Do not blindly copy row-field units into metric thresholds. Validate with `queryAnalytics` before finalizing monitor thresholds. In the Feina ops host rollout, `metric: {kind: "max", field: "cost"}` returned dollar-denominated values, so high-cost thresholds are dollars (`0.25`), not microcents (`250000`). `metric: {kind: "max", field: "duration"}` returned second-denominated values, so slow-run thresholds are seconds (`120`), not nanoseconds (`120000000000`). `metric: {kind: "max", field: "tokens"}` returns token counts, so `1000000` is the right 1M-token threshold.
 
 ## Capture/instrumentation pattern
 

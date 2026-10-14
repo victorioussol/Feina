@@ -33,4 +33,4 @@ Then invite the bot to the target guild with needed intents/permissions. Smoke: 
 
 ## UX note (Orgo)
 
-When Nick wants to watch, open docs/dashboard headed via `orgo-desktop open-url`. Accordion OAuth2 panels often miss pixel clicks; re-measure or use DOM extract while keeping headed paint visible.
+When the operator wants to watch, open docs/dashboard headed via `orgo-desktop open-url`. Accordion OAuth2 panels often miss pixel clicks; re-measure or use DOM extract while keeping headed paint visible.

@@ -20,7 +20,7 @@ Use when the user wants buildable startup / micro-SaaS / AI-agent business ideas
 
 ## Output shape
 
-For each idea: name, one-liner, IB id/slug if any, why-now (evidence), build-this-week stack, pricing wedge, Nick/founder fit, **confidence** (high/moderate/low).
+For each idea: name, one-liner, IB id/slug if any, why-now (evidence), build-this-week stack, pricing wedge, the operator/founder fit, **confidence** (high/moderate/low).
 
 Include:
 - Tools used / failed table
@@ -49,7 +49,7 @@ Include:
 - Full idea research takes 15–30 min; **do not poll in a loop**. Tell the user it is running; check on their ask; attach with `rough_idea_id` when complete.
 - `run_skill` returns expert **prompts** for Hermes to execute, not finished IB writeups. Still produce the analysis and `save_to_project`.
 
-## Nick-specific fit (Dewey operator, when profile matches)
+## Operator-specific fit (Feina ops host operator, when profile matches)
 
 Unfair wedges often beat generic micro-SaaS: managed digital employees on Orgo desktops, Hermes multi-agent fleets, MCP security/gateway for agent teams, agency reporting/follow-up seats. Budget/time from founder profile: prefer pilot ($1.5k) + monthly seat over multi-year pure-infra unless MCP security is the explicit product bet.
 

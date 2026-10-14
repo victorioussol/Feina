@@ -10,6 +10,9 @@ metadata:
     related_skills: [computer-use, orgo-desktop-local]
 ---
 
+> **Feina ops only.** Orgo fleet/desktop/template workflows belong on Feina's **operator** environment — **never** enable `orgo` MCP, `orgo_desktop`, or `computer_use` on a **client** computer. **Do not** write `ORGO_API_KEY` or `ORGO_DEFAULT_COMPUTER_ID` into a client VM's `~/.hermes/.env` or `/root/.env` (client bootstrap strips them).
+
+
 # Orgo Cloud Computers
 
 This skill configures and uses Orgo cloud computers through the Orgo CLI and the Orgo MCP server. It does not store API keys or replace task-specific judgment about whether to use a shell, GUI, file transfer, or an agent session. Prefer scriptable CLI/MCP actions before GUI driving; verify the target computer is running before acting.
@@ -18,13 +21,13 @@ For **customer Hermes deployments / pilots**, also load `managed-hermes-on-orgo`
 
 When Hermes is **on** the Orgo VM, load **`orgo-desktop-local`** and prefer loopback Desktop API for GUI/bash/screenshot.
 
-**Sharing with others:** public fleet connector is GitHub MCP `nickvasilescu/orgo-mcp`. Same-box click/screenshot/bash is the Hermes plugin + CLI + skill (not MCP alone). See `orgo-desktop-local` → `references/packaging-and-sharing.md`. macOS operator UI is a separate product (`hermes-desktop-os1`).
+**Sharing with others:** public fleet connector is GitHub MCP `victorioussol/orgo-mcp`. Same-box click/screenshot/bash is the Hermes plugin + CLI + skill (not MCP alone). See `orgo-desktop-local` → `references/packaging-and-sharing.md`. macOS operator UI is a separate product (`hermes-desktop-os1`).
 
 ## When to Use
 
-- The user mentions Orgo, orgo.ai, Dewey, Minions, cloud computers, or a computer ID.
+- The user mentions Orgo, orgo.ai, Feina ops host, Minions, cloud computers, or a computer ID.
 - The user asks to install, configure, test, or use the Orgo CLI.
-- The user provides an Orgo MCP command such as `npx -y github:nickvasilescu/orgo-mcp`.
+- The user provides an Orgo MCP command such as `npx -y github:victorioussol/orgo-mcp`.
 - The user asks whether Orgo is reachable via CLI or MCP.
 - A task needs a remote Linux VM with shell, screenshot, GUI, upload/download, or one-shot agent execution.
 - The user asks about **Orgo templates** / Forge images / launching from a template.
@@ -92,7 +95,7 @@ orgo computers list
 orgo ssh "<computer-name>"
 orgo run "<task>" --computer "<computer-name>" --json
 orgo agent --computer "<computer-name>"
-hermes mcp add orgo --command npx --env 'ORGO_API_KEY=${ORGO_API_KEY}' ORGO_DEFAULT_COMPUTER_ID='${ORGO_DEFAULT_COMPUTER_ID}' --args -y github:nickvasilescu/orgo-mcp
+Configure the orgo MCP via Hermes CLI (`mcp add` for server `orgo`) on a Feina ops machine only
 hermes mcp test orgo
 ```
 
@@ -124,7 +127,7 @@ CLI has **no** `orgo templates` and **no** `computers create --template`.
 2. Persist PATH for `~/.local/bin` if needed.
 3. Save credentials in Hermes `.env` without printing them.
 4. Confirm the target computer is running (`orgo computers list` or MCP list/get) before acting.
-5. Configure Orgo MCP (stdio `npx -y github:nickvasilescu/orgo-mcp` preferred).
+5. Configure Orgo MCP (stdio `npx -y github:victorioussol/orgo-mcp` preferred).
 6. Verify CLI + `hermes mcp test orgo`.
 7. Choose control mode:
    - **Same-box:** `orgo-desktop-local` / `orgo_desktop_*` / `orgo-desktop` CLI
@@ -144,7 +147,7 @@ For live VNC/desktop streams (browser games, native apps, "watch me click"), not
 
 **Hermes-on-Orgo (same machine):** hostname like `orgo-desktop`, `DISPLAY` set, Chrome present. Prefer **local Desktop API** (`orgo-desktop-local` / `orgo_desktop_*` / `orgo-desktop` CLI) over Orgo MCP screenshot/click. MCP and local hit the same desktop; local is the correct hop.
 
-**Default Dewey:** use `ORGO_DEFAULT_COMPUTER_ID`; do not retarget to customer boxes unless asked.
+**Default Feina ops host:** use `ORGO_DEFAULT_COMPUTER_ID`; do not retarget to customer boxes unless asked.
 
 **Coordinates:** click/drag use **1280x720** model space. Re-measure after maximize/resize; SPAs reflow CTAs (left vs right columns).
 
@@ -225,7 +228,7 @@ A successful remote setup shows the target computer as `running`, `hermes mcp te
 
 ## References
 
-- `references/dewey-orgo-session.md` — Dewey/Minions setup pattern
+- `references/example-orgo-ops-session.md` — example Feina ops session pattern
 - `references/templates-access.md` — templates CLI/MCP/REST matrix and pitfalls
 - `references/gui-desktop-driving.md` — headed GUI: dashboard watch URL, Chrome flags, 1280x720 clicks, adaptive multi-step loop
 - `references/fleet-remote-exec.md` — REST exec patterns, gateway recycle without banned strings, /sbin PATH

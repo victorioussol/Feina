@@ -13,7 +13,7 @@ A 36-character UUID stored as the API key is a strong wrong-value signal. Do not
 
 ## 1Password mapping
 
-Example Dewey reference:
+Example Feina ops host reference:
 
 ```bash
 hermes secrets 1password set AI_GATEWAY_API_KEY \

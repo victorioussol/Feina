@@ -10,7 +10,7 @@ Or the sibling timeouts / empty-output strings from the same bridge.
 
 ## What the message is
 
-Not model prose. Dewey bridge hardcodes it when the Hermes subprocess is treated as failed:
+Not model prose. Feina ops host bridge hardcodes it when the Hermes subprocess is treated as failed:
 
 ```python
 # ~/.hermes_agentphone_bridge/agentphone_bridge.py  (run_hermes_and_reply)
@@ -34,7 +34,7 @@ Critical: on non-zero exit the bridge **does not** fall back to stdout even if H
 
 ## Observed production pattern (2026-07-09)
 
-Two back-to-back Nick iMessages (`can i do google pay`, `hello?`):
+Two back-to-back the operator iMessages (`can i do google pay`, `hello?`):
 
 1. `events.log`: `hermes_start` → tools run → **`hermes_failed` returncode=-6**
 2. `agent.log` for the same session_id:
@@ -47,7 +47,7 @@ Two back-to-back Nick iMessages (`can i do google pay`, `hello?`):
 
 **returncode -6 = SIGABRT** (Python `subprocess` negative codes are signals). Crash lands after successful generation, during CLI/memory (Honcho) shutdown, not during model generation.
 
-Earlier failures on this bridge were mostly returncode `1` (also often thin stderr: 1Password applied secrets + session_id only). Aggregate on Dewey events.log at diagnosis time: far more `hermes_done` than `hermes_failed` (e.g. ~148 done / 7 failed), so this is intermittent, not total bridge death.
+Earlier failures on this bridge were mostly returncode `1` (also often thin stderr: 1Password applied secrets + session_id only). Aggregate on Feina ops host events.log at diagnosis time: far more `hermes_done` than `hermes_failed` (e.g. ~148 done / 7 failed), so this is intermittent, not total bridge death.
 
 ## Diagnostic checklist (order matters)
 

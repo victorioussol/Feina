@@ -10,7 +10,7 @@ Open the staged vault as a separate local Obsidian vault without replacing the l
 
 - Do not cut over just because the staged vault is opened for inspection.
 - Do not open the staged vault with Obsidian Sync enabled.
-- Keep `/root/Dewey-Vault` unchanged until the user explicitly approves cutover.
+- Keep `/root/Feina ops host-Vault` unchanged until the user explicitly approves cutover.
 - Back up the global Obsidian config before changing which vault opens by default.
 
 ## Procedure
@@ -18,15 +18,15 @@ Open the staged vault as a separate local Obsidian vault without replacing the l
 1. Verify the staged vault exists and has root contracts:
 
 ```bash
-[ -d /root/dewey-vault-migration/staging/Dewey-Vault.v2-staged ]
-[ -f /root/dewey-vault-migration/staging/Dewey-Vault.v2-staged/INDEX.md ]
-[ -f /root/dewey-vault-migration/staging/Dewey-Vault.v2-staged/SCHEMA.md ]
+[ -d /root/feina-ops-vault-migration/staging/Feina ops host-Vault.v2-staged ]
+[ -f /root/feina-ops-vault-migration/staging/Feina ops host-Vault.v2-staged/INDEX.md ]
+[ -f /root/feina-ops-vault-migration/staging/Feina ops host-Vault.v2-staged/SCHEMA.md ]
 ```
 
 2. Disable Sync and Publish inside the staged vault before opening it:
 
 ```text
-/root/dewey-vault-migration/staging/Dewey-Vault.v2-staged/.obsidian/core-plugins.json
+/root/feina-ops-vault-migration/staging/Feina ops host-Vault.v2-staged/.obsidian/core-plugins.json
 ```
 
 Set:
@@ -45,14 +45,14 @@ Set:
 Backup example:
 
 ```text
-/root/dewey-vault-migration/backups/obsidian.json.before-open-staged-v2.json
+/root/feina-ops-vault-migration/backups/obsidian.json.before-open-staged-v2.json
 ```
 
 Add a vault entry with:
 
 ```json
 {
-  "path": "/root/dewey-vault-migration/staging/Dewey-Vault.v2-staged",
+  "path": "/root/feina-ops-vault-migration/staging/Feina ops host-Vault.v2-staged",
   "open": true
 }
 ```
@@ -74,7 +74,7 @@ DISPLAY=:99 xdotool search --onlyvisible --class 'obsidian' windowactivate %@
 6. Verify visually that the active window title names the staged vault and that the left tree shows V2 folders:
 
 ```text
-Dewey-Vault.v2-staged - Obsidian
+Feina ops host-Vault.v2-staged - Obsidian
 00.Migration Reports
 01.Agent Operating System
 02.Current Projects
@@ -105,13 +105,13 @@ SCHEMA
 The active window title should contain:
 
 ```text
-Dewey-Vault.v2-staged - Obsidian
+Feina ops host-Vault.v2-staged - Obsidian
 ```
 
 and the staged vault should still reside under:
 
 ```text
-/root/dewey-vault-migration/staging/Dewey-Vault.v2-staged
+/root/feina-ops-vault-migration/staging/Feina ops host-Vault.v2-staged
 ```
 
-not `/root/Dewey-Vault`.
+not `/root/Feina ops host-Vault`.

@@ -13,7 +13,7 @@ Use this for support answers: “how much RAM on Scale?”, “anything between 
 
 Do **not** trust docs-only lines like “Hacker 4 / Team 8 / Scale 16” without checking `subscription-tiers.ts`. That table was true for older keys; go-forward `*_v2` differs.
 
-## Auth for private clone (Dewey)
+## Auth for private clone (Feina ops host)
 
 1. If `GITHUB_TOKEN` / `GH_TOKEN` missing or **commented** in `~/.hermes/.env`, still try **1Password**:
    - `op read 'op://Hermes/Hermes Agent Secrets/GITHUB_PAT'`
@@ -26,7 +26,7 @@ git clone --depth 1 \
   /root/Desktop/repos/orgo-web
 ```
 
-Nick may have push on `OrgoAI/orgo-web`. Related private product trees: `OrgoAI/orgo-metal`, `orgo-cli`, `orgo-shared`, etc.
+the operator may have push on `OrgoAI/orgo-web`. Related private product trees: `OrgoAI/orgo-metal`, `orgo-cli`, `orgo-shared`, etc.
 
 ## Self-serve prices (go-forward checkout)
 
@@ -37,7 +37,7 @@ Hardcoded in pricing client (and `public/pricing.md`):
 | Hacker | `hacker_v2` | **$29** |
 | Startup | `startup_v2` | **$99** |
 | Scale | `scale_v2` | **$399** |
-| Enterprise | custom | email `spencer@orgo.ai` / cal |
+| Enterprise | custom | email `support@orgo.ai` / cal |
 
 **No self-serve SKU between $99 and $399.** Legacy aliases still map: `developer→hacker`, `team→startup`, `max→scale`.
 

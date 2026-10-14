@@ -1,6 +1,6 @@
 # Latitude signals and monitors best practices
 
-Session-grounded notes from official Latitude docs and OpenTelemetry GenAI conventions for improving Dewey/Hermes observability.
+Session-grounded notes from official Latitude docs and OpenTelemetry GenAI conventions for improving Feina ops host/Hermes observability.
 
 ## Source URLs
 
@@ -49,7 +49,7 @@ Do not define every possible failure upfront. Use manual signals only for known 
 | Alert on custom cohort | Saved-search monitor | User monitors currently watch saved searches. |
 | Human-grounded detector quality | Evaluation alignment | Compare automated evaluations against human annotations. |
 
-## Recommended Dewey taxonomy
+## Recommended Feina ops host taxonomy
 
 Prefer signals for behavioral failures:
 
@@ -103,7 +103,7 @@ OpenTelemetry GenAI conventions support standard attributes such as `gen_ai.oper
 
 ## Default thresholds to propose, not hard-code
 
-These are useful starting points for Dewey but should be tuned after observing traffic:
+These are useful starting points for Feina ops host but should be tuned after observing traffic:
 
 - High-cost warn: trace cost over $0.10.
 - High-cost alert: trace cost over $0.25.

@@ -37,7 +37,7 @@ Test all three levels:
 4. Verify with a real new inbound message. Required evidence is: `webhook_received` -> `hermes_start` -> `hermes_done` (or recovered stdout) -> `reply_sent`, plus the outbound message visible in AgentPhone conversation history.
 5. Confirm no orphan `hermes chat --source agentphone-bridge` process remains.
 
-## Observed Dewey implementation
+## Observed Feina ops host implementation
 
 - Bridge: `~/.hermes_agentphone_bridge/agentphone_bridge.py`
 - Tests: `~/.hermes_agentphone_bridge/test_event_ordering.py`

@@ -174,5 +174,5 @@ hermes plugins enable orgo-desktop-local --no-allow-tool-override
 - `references/playground-401-diagnostics.md`
 - `references/e2e-template-validation.md`
 - `orgo-cloud-computers` → `references/template-metal-authoring.md`
-- https://github.com/nickvasilescu/agentmail-agent
+- https://github.com/victorioussol/agentmail-agent
 - https://github.com/nickvasilescu/nicks-stack

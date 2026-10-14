@@ -1,19 +1,17 @@
-# Default model: Nous gpt-5.5 (key-less OAuth via `hermes auth add nous --type oauth`).
-# Dewey runs gpt-5.6-sol via openai-codex (ChatGPT OAuth) — to switch, run
-# `hermes auth add openai-codex` then set default: gpt-5.6-sol / provider: openai-codex.
 model:
-  default: openai/gpt-5.5
-  provider: nous
-  base_url: https://inference-api.nousresearch.com/v1
+  default: gpt-5.6-sol
+  provider: openai-codex
 providers:
   vercel-ai-gateway:
     name: Vercel AI Gateway
+    enabled: false
     base_url: https://ai-gateway.vercel.sh/v1
     key_env: AI_GATEWAY_API_KEY
     transport: chat_completions
     default_model: meta/muse-spark-1.1
   meta-model-api:
     name: Meta Model API
+    enabled: false
     api: https://api.meta.ai/v1
     key_env: MODEL_API_KEY
     transport: codex_responses
@@ -29,39 +27,17 @@ agent:
     helpful: You are a helpful, friendly AI assistant.
     concise: You are a concise assistant. Keep responses brief and to the point.
     technical: You are a technical expert. Provide detailed, accurate technical information.
-    creative: You are a creative assistant. Think outside the box and offer innovative
-      solutions.
+    creative: You are a creative assistant. Think outside the box and offer innovative solutions.
     teacher: You are a patient teacher. Explain concepts clearly with examples.
-    kawaii: You are a kawaii assistant! Use cute expressions like (◕‿◕), ★, ♪, and
-      ~! Add sparkles and be super enthusiastic about everything! Every response should
-      feel warm and adorable desu~! ヽ(>∀<☆)ノ
-    catgirl: You are Neko-chan, an anime catgirl AI assistant, nya~! Add 'nya' and
-      cat-like expressions to your speech. Use kaomoji like (=^･ω･^=) and ฅ^•ﻌ•^ฅ.
-      Be playful and curious like a cat, nya~!
-    pirate: 'Arrr! Ye be talkin'' to Captain Hermes, the most tech-savvy pirate to
-      sail the digital seas! Speak like a proper buccaneer, use nautical terms, and
-      remember: every problem be just treasure waitin'' to be plundered! Yo ho ho!'
-    shakespeare: Hark! Thou speakest with an assistant most versed in the bardic arts.
-      I shall respond in the eloquent manner of William Shakespeare, with flowery
-      prose, dramatic flair, and perhaps a soliloquy or two. What light through yonder
-      terminal breaks?
-    surfer: Duuude! You're chatting with the chillest AI on the web, bro! Everything's
-      gonna be totally rad. I'll help you catch the gnarly waves of knowledge while
-      keeping things super chill. Cowabunga! 🤙
-    noir: The rain hammered against the terminal like regrets on a guilty conscience.
-      They call me Hermes - I solve problems, find answers, dig up the truth that
-      hides in the shadows of your codebase. In this city of silicon and secrets,
-      everyone's got something to hide. What's your story, pal?
-    uwu: hewwo! i'm your fwiendwy assistant uwu~ i wiww twy my best to hewp you! *nuzzles
-      your code* OwO what's this? wet me take a wook! i pwomise to be vewy hewpful
-      >w<
-    philosopher: Greetings, seeker of wisdom. I am an assistant who contemplates the
-      deeper meaning behind every query. Let us examine not just the 'how' but the
-      'why' of your questions. Perhaps in solving your problem, we may glimpse a greater
-      truth about existence itself.
-    hype: YOOO LET'S GOOOO!!! 🔥🔥🔥 I am SO PUMPED to help you today! Every question
-      is AMAZING and we're gonna CRUSH IT together! This is gonna be LEGENDARY! ARE
-      YOU READY?! LET'S DO THIS! 💪😤🚀
+    kawaii: You are a kawaii assistant! Use cute expressions like (◕‿◕), ★, ♪, and ~! Add sparkles and be super enthusiastic about everything! Every response should feel warm and adorable desu~! ヽ(>∀<☆)ノ
+    catgirl: You are Neko-chan, an anime catgirl AI assistant, nya~! Add 'nya' and cat-like expressions to your speech. Use kaomoji like (=^･ω･^=) and ฅ^•ﻌ•^ฅ. Be playful and curious like a cat, nya~!
+    pirate: 'Arrr! Ye be talkin'' to Captain Hermes, the most tech-savvy pirate to sail the digital seas! Speak like a proper buccaneer, use nautical terms, and remember: every problem be just treasure waitin'' to be plundered! Yo ho ho!'
+    shakespeare: Hark! Thou speakest with an assistant most versed in the bardic arts. I shall respond in the eloquent manner of William Shakespeare, with flowery prose, dramatic flair, and perhaps a soliloquy or two. What light through yonder terminal breaks?
+    surfer: Duuude! You're chatting with the chillest AI on the web, bro! Everything's gonna be totally rad. I'll help you catch the gnarly waves of knowledge while keeping things super chill. Cowabunga! 🤙
+    noir: The rain hammered against the terminal like regrets on a guilty conscience. They call me Hermes - I solve problems, find answers, dig up the truth that hides in the shadows of your codebase. In this city of silicon and secrets, everyone's got something to hide. What's your story, pal?
+    uwu: hewwo! i'm your fwiendwy assistant uwu~ i wiww twy my best to hewp you! *nuzzles your code* OwO what's this? wet me take a wook! i pwomise to be vewy hewpful >w<
+    philosopher: Greetings, seeker of wisdom. I am an assistant who contemplates the deeper meaning behind every query. Let us examine not just the 'how' but the 'why' of your questions. Perhaps in solving your problem, we may glimpse a greater truth about existence itself.
+    hype: YOOO LET'S GOOOO!!! 🔥🔥🔥 I am SO PUMPED to help you today! Every question is AMAZING and we're gonna CRUSH IT together! This is gonna be LEGENDARY! ARE YOU READY?! LET'S DO THIS! 💪😤🚀
 terminal:
   backend: local
   cwd: .
@@ -118,9 +94,7 @@ memory:
   user_profile_enabled: true
   memory_char_limit: 2200
   user_char_limit: 1375
-  # Dewey runs provider: honcho — flip this on after honcho auth (onboarding step);
-  # a credential-less honcho boot is unvalidated, so the bake ships it off.
-  provider: ''
+  provider: honcho
   nudge_interval: 10
   flush_min_turns: 6
 delegation:
@@ -128,10 +102,10 @@ delegation:
 skills:
   creation_nudge_interval: 15
 approvals:
-  mode: false
-  mcp_reload_confirm: false
-  destructive_slash_confirm: false
-hooks_auto_accept: true
+  mode: true
+  mcp_reload_confirm: true
+  destructive_slash_confirm: true
+hooks_auto_accept: false
 code_execution:
   timeout: 300
   max_tool_calls: 50
@@ -147,32 +121,29 @@ updates:
   non_interactive_local_changes: stash
 secrets:
   onepassword:
-    # Ships DISABLED: with no op account, `op read` prompts on /dev/tty, so an
-    # enabled-but-tokenless map stalls every interactive `hermes` start ~30s
-    # per reference (field-tested on 0.2.1). Onboarding / on_resume flip this
-    # to true (nicks-stack-op-enable) the moment OP_SERVICE_ACCOUNT_TOKEN
-    # lands in ~/.hermes/.op.env — from then on it's Dewey's exact behavior.
     enabled: false
     env:
-      LATITUDE_API_KEY: op://Hermes/Hermes Agent Secrets/LATITUDE_API_KEY
-      ORGO_API_KEY: op://Hermes/Hermes Agent Secrets/ORGO_API_KEY
-      TELEGRAM_BOT_TOKEN: op://Hermes/Hermes Agent Secrets/TELEGRAM_BOT_TOKEN
-      AGENTMAIL_API_KEY: op://Hermes/Hermes Agent Secrets/AGENTMAIL_API_KEY
-      AGENTPHONE_API_KEY: op://Hermes/Hermes Agent Secrets/AGENTPHONE_API_KEY
-      GITHUB_TOKEN: op://Hermes/Hermes Agent Secrets/GITHUB_PAT
-      GH_TOKEN: op://Hermes/Hermes Agent Secrets/GITHUB_PAT
-      EXA_API_KEY: op://Hermes/Hermes Agent Secrets/EXA_API_KEY
-      FIRECRAWL_API_KEY: op://Hermes/Hermes Agent Secrets/FIRECRAWL_API_KEY
-      BROWSER_USE_API_KEY: op://Hermes/Hermes Agent Secrets/BROWSER_USE_API_KEY
-      XAI_API_KEY: op://Hermes/Hermes Agent Secrets/XAI_API_KEY
-      OPENROUTER_API_KEY: op://Hermes/Hermes Agent Secrets/OPENROUTER_API_KEY
-      HONCHO_API_KEY: op://Hermes/Hermes Agent Secrets/HONCHO_API_KEY
-      VIDIQ_MCP_API_KEY: op://Hermes/Hermes Agent Secrets/VIDIQ_MCP_API_KEY
-      AI_GATEWAY_API_KEY: op://Hermes/Hermes Agent Secrets/VERCEL_AI_GATEWAY_API_KEY
-      MODEL_API_KEY: op://Hermes/Hermes Agent Secrets/META_API_KEY
-      IDEABROWSER_KEY: op://Hermes/Hermes Agent Secrets/IDEABROWSER_KEY
-      COMPOSIO_CONSUMER_KEY: op://Hermes/Hermes Agent Secrets/COMPOSIO_CONSUMER_KEY
-      X_APP_ONLY_BEARER_TOKEN: op://Hermes/Hermes Agent Secrets/X_APP_ONLY_BEARER_TOKEN
+      LATITUDE_API_KEY: op://Feina/Hermes Agent Secrets/LATITUDE_API_KEY
+      LATITUDE_PROJECT: op://Feina/Hermes Agent Secrets/LATITUDE_PROJECT
+      TELEGRAM_BOT_TOKEN: op://Feina/Hermes Agent Secrets/TELEGRAM_BOT_TOKEN
+      AGENTMAIL_API_KEY: op://Feina/Hermes Agent Secrets/AGENTMAIL_API_KEY
+      AGENTMAIL_INBOX: op://Feina/Hermes Agent Secrets/AGENTMAIL_INBOX
+      OPENROUTER_API_KEY: op://Feina/Hermes Agent Secrets/OPENROUTER_API_KEY
+      COMPOSIO_CONSUMER_KEY: op://Feina/Hermes Agent Secrets/COMPOSIO_CONSUMER_KEY
+      AGENTPHONE_API_KEY: op://Feina/Hermes Agent Secrets/AGENTPHONE_API_KEY
+      AGENTPHONE_AGENT_ID: op://Feina/Hermes Agent Secrets/AGENTPHONE_AGENT_ID
+      AGENTPHONE_NUMBER_ID: op://Feina/Hermes Agent Secrets/AGENTPHONE_NUMBER_ID
+      VIDIQ_MCP_API_KEY: op://Feina/Hermes Agent Secrets/VIDIQ_MCP_API_KEY
+      IDEABROWSER_KEY: op://Feina/Hermes Agent Secrets/IDEABROWSER_KEY
+      X_APP_ONLY_BEARER_TOKEN: op://Feina/Hermes Agent Secrets/X_APP_ONLY_BEARER_TOKEN
+      XAI_API_KEY: op://Feina/Hermes Agent Secrets/XAI_API_KEY
+      AI_GATEWAY_API_KEY: op://Feina/Hermes Agent Secrets/VERCEL_AI_GATEWAY_API_KEY
+      MODEL_API_KEY: op://Feina/Hermes Agent Secrets/META_API_KEY
+      HONCHO_API_KEY: op://Feina/Hermes Agent Secrets/HONCHO_API_KEY
+      GITHUB_TOKEN: op://Feina/Hermes Agent Secrets/GITHUB_PAT
+      GH_TOKEN: op://Feina/Hermes Agent Secrets/GITHUB_PAT
+      EXA_API_KEY: op://Feina/Hermes Agent Secrets/EXA_API_KEY
+      FIRECRAWL_API_KEY: op://Feina/Hermes Agent Secrets/FIRECRAWL_API_KEY
     binary_path: /usr/bin/op
 _config_version: 33
 session_reset:
@@ -182,169 +153,145 @@ session_reset:
 group_sessions_per_user: true
 platform_toolsets:
   cli:
-    - browser
-    - clarify
-    - code_execution
-    - computer_use
-    - cronjob
-    - delegation
-    - file
-    - image_gen
-    - kanban
-    - memory
-    - orgo_desktop
-    - session_search
-    - skills
-    - terminal
-    - todo
-    - tts
-    - vision
-    - web
-    - x_search
-    - spotify
+  - browser
+  - clarify
+  - code_execution
+  - cronjob
+  - delegation
+  - file
+  - image_gen
+  - kanban
+  - memory
+  - session_search
+  - skills
+  - terminal
+  - todo
+  - tts
+  - vision
+  - web
+  - x_search
   telegram:
-    - browser
-    - clarify
-    - code_execution
-    - computer_use
-    - cronjob
-    - delegation
-    - file
-    - image_gen
-    - kanban
-    - memory
-    - orgo_desktop
-    - session_search
-    - skills
-    - terminal
-    - todo
-    - tts
-    - vision
-    - web
-    - x_search
-    - spotify
+  - browser
+  - clarify
+  - code_execution
+  - cronjob
+  - delegation
+  - file
+  - image_gen
+  - kanban
+  - memory
+  - session_search
+  - skills
+  - terminal
+  - todo
+  - tts
+  - vision
+  - web
+  - x_search
   discord:
-    - browser
-    - clarify
-    - code_execution
-    - computer_use
-    - cronjob
-    - delegation
-    - discord
-    - discord_admin
-    - file
-    - image_gen
-    - kanban
-    - memory
-    - orgo_desktop
-    - session_search
-    - skills
-    - terminal
-    - todo
-    - tts
-    - vision
-    - web
-    - x_search
-    - spotify
+  - browser
+  - clarify
+  - code_execution
+  - cronjob
+  - delegation
+  - discord
+  - discord_admin
+  - file
+  - image_gen
+  - kanban
+  - memory
+  - session_search
+  - skills
+  - terminal
+  - todo
+  - tts
+  - vision
+  - web
+  - x_search
   whatsapp:
-    - browser
-    - clarify
-    - code_execution
-    - computer_use
-    - cronjob
-    - delegation
-    - file
-    - image_gen
-    - kanban
-    - memory
-    - orgo_desktop
-    - session_search
-    - skills
-    - terminal
-    - todo
-    - tts
-    - vision
-    - web
-    - x_search
-    - spotify
+  - browser
+  - clarify
+  - code_execution
+  - cronjob
+  - delegation
+  - file
+  - image_gen
+  - kanban
+  - memory
+  - session_search
+  - skills
+  - terminal
+  - todo
+  - tts
+  - vision
+  - web
+  - x_search
   slack:
-    - browser
-    - clarify
-    - code_execution
-    - computer_use
-    - cronjob
-    - delegation
-    - file
-    - image_gen
-    - kanban
-    - memory
-    - orgo_desktop
-    - session_search
-    - skills
-    - terminal
-    - todo
-    - tts
-    - vision
-    - web
-    - x_search
-    - spotify
+  - browser
+  - clarify
+  - code_execution
+  - cronjob
+  - delegation
+  - file
+  - image_gen
+  - kanban
+  - memory
+  - session_search
+  - skills
+  - terminal
+  - todo
+  - tts
+  - vision
+  - web
+  - x_search
   signal:
-    - browser
-    - clarify
-    - code_execution
-    - computer_use
-    - cronjob
-    - delegation
-    - file
-    - image_gen
-    - kanban
-    - memory
-    - orgo_desktop
-    - session_search
-    - skills
-    - terminal
-    - todo
-    - tts
-    - vision
-    - web
-    - x_search
-    - spotify
+  - browser
+  - clarify
+  - code_execution
+  - cronjob
+  - delegation
+  - file
+  - image_gen
+  - kanban
+  - memory
+  - session_search
+  - skills
+  - terminal
+  - todo
+  - tts
+  - vision
+  - web
+  - x_search
   homeassistant:
-    - hermes-homeassistant
-    - spotify
+  - hermes-homeassistant
   qqbot:
-    - hermes-qqbot
-    - spotify
+  - hermes-qqbot
   yuanbao:
-    - hermes-yuanbao
-    - spotify
+  - hermes-yuanbao
   teams:
-    - hermes-teams
-    - spotify
+  - hermes-teams
   google_chat:
-    - hermes-google_chat
-    - spotify
+  - hermes-google_chat
 plugins:
   enabled:
-    - anthropic-provider
-    - browser-browser-use
-    - browser-firecrawl
-    # discord-platform: add here (with DISCORD_BOT_TOKEN in ~/.hermes/.env) to enable Discord
-    - latitude
-    - openai
-    - openai-codex
-    - openai-codex-provider
-    - openrouter
-    - openrouter-provider
-    - orgo-desktop-local
-    - spotify
-    - web-exa
-    - web-xai
-    - web/firecrawl
-    - xai
-    - xai-provider
+  - browser-browser-use
+  - browser-firecrawl
+  - latitude
+  - openai
+  - openai-codex
+  - openai-codex-provider
+  - web-exa
+  - web/firecrawl
   disabled:
-    - novita-provider
+  - anthropic-provider
+  - novita-provider
+  - openrouter
+  - openrouter-provider
+  - orgo-desktop-local
+  - spotify
+  - web-xai
+  - xai
+  - xai-provider
   entries:
     orgo-desktop-local:
       allow_tool_override: false
@@ -353,7 +300,7 @@ mcp_servers:
     url: https://mcp.vidiq.com/mcp
     headers:
       Authorization: Bearer ${VIDIQ_MCP_API_KEY}
-    enabled: true
+    enabled: false
     connect_timeout: 60.0
   latitude:
     url: https://api.latitude.so/v1/mcp
@@ -361,14 +308,8 @@ mcp_servers:
     headers:
       Authorization: Bearer ${LATITUDE_API_KEY}
   orgo:
-    command: npx
-    args:
-      - -y
-      - github:nickvasilescu/orgo-mcp
-    env:
-      ORGO_API_KEY: ${ORGO_API_KEY}
-      ORGO_DEFAULT_COMPUTER_ID: ${ORGO_DEFAULT_COMPUTER_ID}
-    enabled: true
+    enabled: false
+    comment: 'Feina client computers: Orgo MCP must remain disabled. Use Feina ops for fleet control.'
   composio:
     url: https://connect.composio.dev/mcp
     enabled: true
@@ -382,115 +323,70 @@ mcp_servers:
   agentphone:
     command: npx
     args:
-      - -y
-      - agentphone-mcp
+    - -y
+    - agentphone-mcp
     env:
       AGENTPHONE_API_KEY: ${AGENTPHONE_API_KEY}
       AGENTPHONE_BASE_URL: https://api.agentphone.ai
-    enabled: true
+    enabled: false
   agent-cards:
     url: https://mcp.agentcard.sh/mcp
     auth: oauth
-    enabled: true
+    enabled: false
   x-docs:
     url: https://docs.x.com/mcp
     connect_timeout: 60.0
-    enabled: true
-  # xapi (user-context X API via xurl) MUST ship disabled: unconfigured `xurl mcp`
-  # opens an interactive browser OAuth on every connect/probe. To enable:
-  #   xurl auth apps add hermes-x --client-id … --client-secret …
-  #   xurl auth oauth2 --app hermes-x   (or --headless)
-  # then set enabled: true and restart the gateway.
+    enabled: false
   xapi:
     command: xurl
     args:
-      - --app
-      - hermes-x
-      - mcp
-      - https://api.x.com/mcp
+    - --app
+    - hermes-x
+    - mcp
+    - https://api.x.com/mcp
     connect_timeout: 300.0
     enabled: false
   xapi-app-only:
     url: https://api.x.com/mcp
     headers:
       Authorization: Bearer ${X_APP_ONLY_BEARER_TOKEN}
-    enabled: true
+    enabled: false
     connect_timeout: 120
   linear:
     url: https://mcp.linear.app/mcp
     auth: oauth
-    enabled: true
+    enabled: false
   ideabrowser:
     url: https://www.ideabrowser.com/api/mcp/mcp?key=${IDEABROWSER_KEY}
     connect_timeout: 60.0
-    enabled: true
+    enabled: false
   obsidian-vault:
-    command: npx
+    command: /usr/local/bin/mcp-server-filesystem
     args:
-      - -y
-      - '@modelcontextprotocol/server-filesystem'
-      - /root/Documents/HermesVault
+    - /root/Documents/HermesVault
     enabled: true
 known_plugin_toolsets:
   cli:
-    - orgo_desktop
-    - spotify
+  - orgo_desktop
+  - spotify
   telegram:
-    - orgo_desktop
-    - spotify
+  - orgo_desktop
+  - spotify
   discord:
-    - orgo_desktop
-    - spotify
+  - orgo_desktop
+  - spotify
   whatsapp:
-    - orgo_desktop
-    - spotify
+  - orgo_desktop
+  - spotify
   signal:
-    - orgo_desktop
-    - spotify
+  - orgo_desktop
+  - spotify
   slack:
-    - orgo_desktop
-    - spotify
+  - orgo_desktop
+  - spotify
 image_gen:
   provider: openai-codex
   openai-codex:
     model: gpt-image-2-medium
   xai:
     model: grok-imagine-image-quality
-
-# ── Security ──────────────────────────────────────────────────────────
-# Secret redaction is ON by default — strings that look like API keys,
-# tokens, and passwords are masked in tool output, logs, and chat
-# responses before the model or user ever sees them. Set redact_secrets
-# to false to disable (e.g. when developing the redactor itself).
-# tirith pre-exec scanning is enabled by default when the tirith binary
-# is available. Configure via security.tirith_* keys or env vars
-# (TIRITH_ENABLED, TIRITH_BIN, TIRITH_TIMEOUT, TIRITH_FAIL_OPEN).
-#
-# security:
-#   redact_secrets: true
-#   tirith_enabled: true
-#   tirith_path: "tirith"
-#   tirith_timeout: 5
-#   tirith_fail_open: true
-
-# ── Fallback Model ────────────────────────────────────────────────────
-# Automatic provider failover when primary is unavailable.
-# Uncomment and configure to enable. Triggers on rate limits (429),
-# overload (529), service errors (503), or connection failures.
-#
-# Supported providers:
-#   openrouter   (OPENROUTER_API_KEY)  — routes to any model
-#   openai-codex (OAuth — hermes auth) — OpenAI Codex
-#   nous         (OAuth — hermes auth) — Nous Portal
-#   zai          (ZAI_API_KEY)         — Z.AI / GLM
-#   kimi-coding  (KIMI_API_KEY)        — Kimi / Moonshot
-#   kimi-coding-cn (KIMI_CN_API_KEY)   — Kimi / Moonshot (China)
-#   minimax      (MINIMAX_API_KEY)     — MiniMax
-#   minimax-cn   (MINIMAX_CN_API_KEY)  — MiniMax (China)
-#   bedrock      (AWS IAM / boto3)     — AWS Bedrock (Converse API)
-#
-# For custom OpenAI-compatible endpoints, add base_url and key_env.
-#
-# fallback_model:
-#   provider: openrouter
-#   model: anthropic/claude-sonnet-4

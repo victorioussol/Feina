@@ -1,6 +1,6 @@
 # Latitude user identity for Hermes traces
 
-Session-derived detail from configuring the Orgo `dewey` Latitude project.
+Session-derived detail from configuring the Orgo `feina-ops` Latitude project.
 
 ## Symptom
 
@@ -12,8 +12,8 @@ This does not require creating a user record in Latitude. It means the ingested 
 
 Verified via Latitude MCP:
 
-- `getUsersOverview(projectSlug="dewey")` initially returned `uniqueUsers: 0`, `identifiedTraces: 0`, `identifiedSessions: 0` while traces/sessions existed.
-- `listTraces(projectSlug="dewey")` showed recent traces with `userId: null`.
+- `getUsersOverview(projectSlug="feina-ops")` initially returned `uniqueUsers: 0`, `identifiedTraces: 0`, `identifiedSessions: 0` while traces/sessions existed.
+- `listTraces(projectSlug="feina-ops")` showed recent traces with `userId: null`.
 
 ## Official Latitude pattern
 
@@ -40,7 +40,7 @@ Env vars used:
 ```bash
 LATITUDE_USER_ID=${OWNER_EMAIL}
 LATITUDE_USER_EMAIL=${OWNER_EMAIL}
-LATITUDE_USER_NAME="Nick Vasilescu"
+LATITUDE_USER_NAME="Example Operator"
 ```
 
 Code locations patched in the Hermes venv:
@@ -72,9 +72,9 @@ Implementation shape:
 3. Verify via Latitude MCP:
 
 ```text
-listUsers(projectSlug="dewey")
-getUsersOverview(projectSlug="dewey")
-listTraces(projectSlug="dewey", limit=5)
+listUsers(projectSlug="feina-ops")
+getUsersOverview(projectSlug="feina-ops")
+listTraces(projectSlug="feina-ops", limit=5)
 ```
 
 Expected readback after the fix:

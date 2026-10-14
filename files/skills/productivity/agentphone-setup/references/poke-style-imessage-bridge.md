@@ -18,7 +18,7 @@ For webhook-mode AgentPhone agents, AgentPhone is mostly transport. The response
 
 Different model for iMessage than the global Hermes config. The bridge reads `AGENTPHONE_HERMES_MODEL` and `AGENTPHONE_HERMES_PROVIDER` from its env file and passes them as **CLI flags** (`-m` and `--provider`) to the `hermes chat` subprocess.
 
-**PITFALL:** `HERMES_INFERENCE_MODEL` / `HERMES_INFERENCE_PROVIDER` env vars do NOT work for `hermes chat` mode. They only work for `hermes -z` (oneshot) and `hermes --tui`. If you set them as env vars on the subprocess, the bridge will silently fall back to the global config model, which means iMessage will report whatever model Telegram/CLI is using. This was a real bug observed in production: iMessage Dewey reported `z-ai/glm-5.2` (the Telegram model) instead of `deepseek/deepseek-v4-flash` because the env var was ignored.
+**PITFALL:** `HERMES_INFERENCE_MODEL` / `HERMES_INFERENCE_PROVIDER` env vars do NOT work for `hermes chat` mode. They only work for `hermes -z` (oneshot) and `hermes --tui`. If you set them as env vars on the subprocess, the bridge will silently fall back to the global config model, which means iMessage will report whatever model Telegram/CLI is using. This was a real bug observed in production: iMessage Feina ops host reported `z-ai/glm-5.2` (the Telegram model) instead of `deepseek/deepseek-v4-flash` because the env var was ignored.
 
 Correct implementation — pass as CLI flags in the command construction:
 
@@ -104,7 +104,7 @@ An earlier iteration used regex-based keyword extraction to build "contextual" a
 - `pulling up have` — extracted "have" from "do u have a connector to doordash?"
 - `on it, sure` — extracted "sure" from "are u sure you know what model youre running?"
 
-The fundamental problem: regex-based NLU is fragile. No matter how many guards, stop words, and patterns you add, there will always be messages where extraction produces word salad. The ack's job is to say "I got your message, I'm working on it." That's it. The contextual connection comes from Dewey's actual answer naturally referencing what was asked.
+The fundamental problem: regex-based NLU is fragile. No matter how many guards, stop words, and patterns you add, there will always be messages where extraction produces word salad. The ack's job is to say "I got your message, I'm working on it." That's it. The contextual connection comes from Feina ops host's actual answer naturally referencing what was asked.
 
 ### Correct implementation
 
@@ -149,7 +149,7 @@ If the user only sees “Hermes hit an internal error while generating a reply,�
 - Min chars ~120, target ~160, max chunks 3.
 - Split at sentence/paragraph boundaries only.
 - Do **not** split copyable artifacts. Drafted emails, drafted texts, code, tables, structured outputs, and anything the user may paste elsewhere should stay as one bubble even if long.
-- Detect copyable drafts with patterns like `i'd send:`, `i'd reply:`, `draft:`, `reply:`, `Subject:`, `To:`, or greeting+signoff structures such as `Hey Name, ... Nick`.
+- Detect copyable drafts with patterns like `i'd send:`, `i'd reply:`, `draft:`, `reply:`, `Subject:`, `To:`, or greeting+signoff structures such as `Hey Name, ... the operator`.
 - Keep chunking semantic. Never split URLs, code fences, markdown tables, or a sentence fragment just because a character threshold fired.
 
 ## Verification recipe

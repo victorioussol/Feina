@@ -1,6 +1,6 @@
 # Orgo disk resize: block size ≠ filesystem size
 
-When Nick/Orgo increases disk (or CPU) on a running computer, the block device may grow while the root filesystem does not. Always verify live.
+When the operator/Orgo increases disk (or CPU) on a running computer, the block device may grow while the root filesystem does not. Always verify live.
 
 ## Ground truth checks
 
@@ -36,7 +36,7 @@ If root is a partition: growpart then /sbin/resize2fs on the partition device (c
 
 ## Example (Budgetdog ops 2026-07-10)
 
-- Disk block: 30G after Nick resize
+- Disk block: 30G after the operator resize
 - FS before: 7.8G, 83% used
 - After /sbin/resize2fs /dev/vda: 30G, 22% used (~23G free)
 - CPU live: 8; RAM still 8G; API still reported cpu 4

@@ -119,7 +119,7 @@ Before opening a staged vault in Obsidian:
 Expected V3 verification title example:
 
 ```text
-VAULT-INDEX - Dewey-Agent-Vault.v3-clean - Obsidian 1.12.7
+VAULT-INDEX - Feina ops host-Agent-Vault.v3-clean - Obsidian 1.12.7
 ```
 
 ## Hermes Integration Before Cutover
@@ -127,8 +127,8 @@ VAULT-INDEX - Dewey-Agent-Vault.v3-clean - Obsidian 1.12.7
 For review/testing, it is acceptable to point Hermes at the staged V3 vault while leaving the production vault untouched:
 
 ```bash
-OBSIDIAN_VAULT_PATH=/root/dewey-vault-migration/staging/Dewey-Agent-Vault.v3-clean
-WIKI_PATH=/root/dewey-vault-migration/staging/Dewey-Agent-Vault.v3-clean
+OBSIDIAN_VAULT_PATH=/root/feina-ops-vault-migration/staging/Feina ops host-Agent-Vault.v3-clean
+WIKI_PATH=/root/feina-ops-vault-migration/staging/Feina ops host-Agent-Vault.v3-clean
 ```
 
 Rules:
@@ -138,7 +138,7 @@ Rules:
 3. Verify by printing only those two lines and checking required root contracts (`VAULT-INDEX.md`, `SCHEMA.md`, `AGENTS.md`, `HERMES.md`).
 4. Existing Hermes sessions need `/reload` or a restart to see `.env` changes; fresh sessions pick them up automatically.
 5. Record the staged integration in `active-context.md`, `LOG.md`, and project tasks, then commit the change.
-6. After production cutover, repoint both variables to `/root/Dewey-Vault`; do not leave them pointing at the old staging directory.
+6. After production cutover, repoint both variables to `/root/Feina ops host-Vault`; do not leave them pointing at the old staging directory.
 
 ## Obsidian Runtime Config Drift
 

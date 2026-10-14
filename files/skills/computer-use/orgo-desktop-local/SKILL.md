@@ -11,13 +11,16 @@ metadata:
     related_skills: [orgo-cloud-computers, computer-use]
 ---
 
+> **Feina ops only.** Orgo fleet/desktop/template workflows belong on Feina's **operator** environment — **never** enable `orgo` MCP, `orgo_desktop`, or `computer_use` on a **client** computer. **Do not** write `ORGO_API_KEY` or `ORGO_DEFAULT_COMPUTER_ID` into a client VM's `~/.hermes/.env` or `/root/.env` (client bootstrap strips them).
+
+
 # Orgo Desktop Local (same-box computer use)
 
 When Hermes runs **inside** an Orgo VM (hostname often `orgo-desktop`, `DISPLAY=:99`),
 GUI/control actions should hit the **in-VM Desktop API**, not the cloud Orgo MCP hop
 and not CUA-first.
 
-**Standing policy (Dewey / this class of host):** prefer **Orgo local computer use**
+**Standing policy (Feina ops host / this class of host):** prefer **Orgo local computer use**
 over CUA driver / Hermes `computer_use`. Local Desktop API is the spine for
 screenshot, click, type, key, drag, open-url, bash, and black-framebuffer recovery.
 CUA is optional AX/SOM enrichment only. Cloud Orgo MCP GUI is for other VMs and
@@ -41,14 +44,14 @@ on Orgo it defers here first.
 Actions: `/screenshot` `/click` `/double_click` `/drag` `/type` `/key` `/scroll`
 `/mouse_move` `/wait` `/bash` `/exec` `/status` plus WS `/events` `/terminal` `/audio`.
 
-Coordinate space: full desktop pixels (Dewey default **1280×720**).
+Coordinate space: full desktop pixels (Feina ops host default **1280×720**).
 
 See `references/desktop-api.md` for request shapes and events.
 
 ## Prefer order (mandatory)
 
 1. **Co-located + doctor green + nonblack paint** → local Desktop API (this skill / plugin tools / `orgo-desktop` CLI)
-2. **User wants to watch** ("headed", "on your screen", "so I can see", noVNC) → **headed Orgo first** (`orgo-desktop open-url`), not headless `browser_*`. Nick preference 2026-07-09: when researching dashboards, OAuth UIs, toolkit docs, or any UI they asked to watch, keep the paint on VNC. Use headless browser only for silent text extraction when they did not ask to watch.
+2. **User wants to watch** ("headed", "on your screen", "so I can see", noVNC) → **headed Orgo first** (`orgo-desktop open-url`), not headless `browser_*`. the operator preference 2026-07-09: when researching dashboards, OAuth UIs, toolkit docs, or any UI they asked to watch, keep the paint on VNC. Use headless browser only for silent text extraction when they did not ask to watch.
 3. **Websites (silent recon)** → Hermes `browser_*` first (DOM) when the user is not watching
 4. **Scriptable** → Hermes `terminal` or Desktop API `/bash` before pixel clicks
 5. **Other computers / lifecycle** → cloud Orgo MCP / `https://www.orgo.ai/api` (`orgo-cloud-computers`)

@@ -7,7 +7,7 @@ When to load:
 - “How much RAM on Scale?”
 - “Anything between $99 and $399?”
 - Customer told they must upgrade for memory
-- Nick: answer from orgo-web
+- the operator: answer from orgo-web
 
 Quick go-forward (`*_v2`):
 

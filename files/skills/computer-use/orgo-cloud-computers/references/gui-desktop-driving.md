@@ -17,7 +17,7 @@ Session-proven patterns for driving the live Orgo desktop when the user wants to
 3. **Same-box:** `orgo-desktop doctor` or `orgo_desktop_doctor` must be ready. Do not wait for CUA.
 4. **Remote-only:** use Orgo MCP screenshot/click when not co-located.
 
-Default Dewey computer id lives in `ORGO_DEFAULT_COMPUTER_ID`. Do not retarget to customer VMs unless the user names them.
+Default Feina ops host computer id lives in `ORGO_DEFAULT_COMPUTER_ID`. Do not retarget to customer VMs unless the user names them.
 
 ## Tool map
 
@@ -89,4 +89,4 @@ Faster and less ambiguous than homepage modals. If hash routes (`#ai`) are stale
 - Parent skill: `orgo-cloud-computers` SKILL.md
 - Same-box stack: `orgo-desktop-local` (plugin + CLI + Desktop API)
 - Cross-link: `computer-use` (CUA path; optional on Orgo)
-- Setup history: `references/dewey-orgo-session.md`
+- Setup history: `references/feina-ops-orgo-session.md`

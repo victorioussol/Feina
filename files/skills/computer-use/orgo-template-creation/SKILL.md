@@ -10,6 +10,9 @@ metadata:
     related_skills: [orgo-cloud-computers, orgo-desktop-local]
 ---
 
+> **Feina ops only.** Orgo fleet/desktop/template workflows belong on Feina's **operator** environment — **never** enable `orgo` MCP, `orgo_desktop`, or `computer_use` on a **client** computer. **Do not** write `ORGO_API_KEY` or `ORGO_DEFAULT_COMPUTER_ID` into a client VM's `~/.hermes/.env` or `/root/.env` (client bootstrap strips them).
+
+
 # Orgo Template Creation
 
 Author, validate, publish, build, launch, and prune Orgo account templates (`default/<name>@<semver>`) over REST. Does not install Hermes on an already-running VM (use the desktop-local plugin path for that) and does not replace cloud computer lifecycle (`orgo-cloud-computers`).
@@ -163,7 +166,7 @@ Optional: launch one computer from `template_ref` and confirm package validate /
 ## References
 
 - Package gold: `/root/Desktop/orgo-hermes-desktop-local/` (`build_template.py`, `SUCCESS_CRITERIA.md`)
-- GitHub patterns: `nickvasilescu/agentmail-agent`, `nickvasilescu/nicks-stack`, `nickvasilescu/orgo-hermes-desktop-local`
+- GitHub patterns: `victorioussol/agentmail-agent`, `nickvasilescu/nicks-stack` (upstream MIT stack), `victorioussol/Feina` (Feina fork), `victorioussol/orgo-hermes-desktop-local`
 - Schema: https://docs.orgo.ai/guides/templates/schema
 - Metal notes: `orgo-cloud-computers` → `references/template-metal-authoring.md`
 - Helper: `scripts/orgo_template_ops.py`

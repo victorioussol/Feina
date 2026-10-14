@@ -1,13 +1,13 @@
 # Latitude monitors + escalating signal triage
 
-Use after a fleet coverage audit or when Nick asks what to do **in Latitude product** (not OTEL injection).
+Use after a fleet coverage audit or when the operator asks what to do **in Latitude product** (not OTEL injection).
 
 ## Product state diagnosis
 
 | Pattern | Meaning | Action |
 |---|---|---|
 | Many **flagger** signals, **0 monitors** | Behavior noise without ops thresholds | Create operational monitors; do **not** invent more signals |
-| Many monitors, few signals | Dewey-style ops posture | Leave signals for real behaviors after annotation |
+| Many monitors, few signals | Feina ops host-style ops posture | Leave signals for real behaviors after annotation |
 | Project empty of both | Nothing instrumented | Fix OTEL first (`orgo-fleet-coverage.md`) |
 
 **Default for high-volume fleets (Momentum-class):** monitors + triage escalating signals. Do not create dozens of manual signals.
@@ -72,7 +72,7 @@ Do **not** put `slug` in the body; name derives slug.
 
 `--dry-run` can return success for a body that still fails live create with 400 Invalid input (e.g. nested `rule` from list payloads). **Dry-run is not proof of schema validity.** Prefer the flat examples above, or `latitude monitors create --spec` → `CreateMonitorBody`. Confirm with a real create + `monitors list` read-back.
 
-## Standard five monitors (clone Dewey, retune fleet)
+## Standard five monitors (clone Feina ops host, retune fleet)
 
 Validate units with analytics **before** thresholds:
 
@@ -87,7 +87,7 @@ latitude analytics query --project-slug <slug> --format json --json \
 | High cost | max cost | $0.25 | Safety net; may rarely fire if fleet is cheap |
 | Slow | max duration | 120s | Noisy if max duration is thousands of seconds — retune |
 | Runaway context | max tokens | 1_000_000 | |
-| Errored spike | **errorRate** (fleet) or count (single agent) | 5% errorRate | **Do not** use Dewey's count>5 on high-volume fleets |
+| Errored spike | **errorRate** (fleet) or count (single agent) | 5% errorRate | **Do not** use Feina ops host's count>5 on high-volume fleets |
 | Poor capture | match + semantic query | — | Inline savedSearch target, id null |
 
 ## Escalating signal triage

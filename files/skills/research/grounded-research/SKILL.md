@@ -134,11 +134,11 @@ When user asks how to store filmed video then have the agent publish everywhere:
 - **Do not** use YouTube unlisted as master storage. Prefer approval-gated first posts.
 - See also `vendor-tool-evaluation` for product verdicts from official pages.
 
-## Hermes voice vs OpenAI Realtime (attach to Dewey)
+## Hermes voice vs OpenAI Realtime (attach to Feina ops)
 
 - **Native Hermes voice** = STT → agent loop → TTS (not Realtime-as-brain). Config: `stt.*`, `tts.*`, `/voice on`. OpenAI ears/mouth: `VOICE_TOOLS_OPENAI_KEY` (Whisper + OpenAI TTS). Edge TTS works with no key.
 - **OpenAI Realtime / gpt-realtime** = duplex speech-to-speech. Hermes core does **not** replace the agent loop with Realtime. Existing Realtime use: Google Meet plugin `mode=realtime` (`OPENAI_API_KEY` / `HERMES_MEET_REALTIME_KEY` + virtual audio).
-- **Recommended product path for Nick:** Path1 Telegram voice notes + OpenAI STT/TTS (keep Grok as brain); Path2 Realtime **orchestrator** tool-calling into Hermes/Grok/Orgo executor. Do not fork Realtime as sole tool host if MCP/computer-use/Honcho must stay.
+- **Recommended product path for the client:** Path1 Telegram voice notes + OpenAI STT/TTS (keep Grok as brain); Path2 Realtime **orchestrator** tool-calling into Hermes/Grok/Orgo executor. Do not fork Realtime as sole tool host if MCP/computer-use/Honcho must stay.
 - Orgo cloud desktop usually has no real mic — prefer Telegram/AgentPhone audio over CLI mic on the VM.
 
 ## Startup / idea grounding (IdeaBrowser + market + X)
@@ -146,9 +146,9 @@ When user asks how to store filmed video then have the agent publish everywhere:
 When the user wants **startup ideas, micro-SaaS wedges, AI agent business concepts, or "what should we build"** and grounding is requested (or implied: "use IdeaBrowser / xmcp / search tools"):
 
 1. **Do not invent a top-10 list from model priors alone.** Run multi-source grounding first.
-2. **Stack (Dewey):** IdeaBrowser MCP (validated idea DB) + xurl/x_search (demand chatter) + Composio Exa/Perplexity/Firecrawl (market writeups) + Hermes `web_extract` on shortlisted URLs.
+2. **Stack (Feina ops):** IdeaBrowser MCP (validated idea DB) + xurl/x_search (demand chatter) + Composio Exa/Perplexity/Firecrawl (market writeups) + Hermes `web_extract` on shortlisted URLs.
 3. **IdeaBrowser ops** live in `secret-manager-setup` → `references/ideabrowser-mcp-hermes.md` (setup, key safety, HTTP fallback when tools not mid-session). Research playbook + output shape: `references/ideabrowser-startup-ideation.md` (this skill).
-4. **Founder-fit filter:** pull `get_founder_profile` when available; prefer ideas that match skills, budget, time, and unfair stack (for Nick: Orgo computers, Hermes fleets, marketing, agency/AI-employee demos).
+4. **Founder-fit filter:** pull `get_founder_profile` when available; prefer ideas that match skills, budget, time, and unfair stack (for the client: Orgo computers, Hermes fleets, marketing, agency/AI-employee demos).
 5. **Default next deliverable after ranking:** one wedge + a demoable landing/pilot CTA (not a full product). Landing craft: `claude-design` + `popular-web-designs`.
 6. If the wedge is a **managed AI employee**, lock one role + weekly artifact and follow skill `managed-ai-employee-pilot` (headed Orgo demo pack required; do not stop at landing mock).
 7. Always emit the **tools used / failed** table and per-idea **confidence** labels.

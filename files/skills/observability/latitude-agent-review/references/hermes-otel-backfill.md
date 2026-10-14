@@ -1,12 +1,12 @@
 # Hermes Latitude OTEL backfill (existing Orgo VMs)
 
-Use when eng/agency Hermes boxes have **no Latitude service** (or config is stale) and product provision already knows how to instrument new VMs (MomentumClaw `provision.ts` pattern). Prefer this over copying Dewey’s full `LATITUDE_*` env pack.
+Use when eng/agency Hermes boxes have **no Latitude service** (or config is stale) and product provision already knows how to instrument new VMs (MomentumClaw `provision.ts` pattern). Prefer this over copying Feina ops host’s full `LATITUDE_*` env pack.
 
-Also use when Nick says **set up Latitude for customer X** (including thin pilots like Budgetdog) — create a **dedicated project** + wire emission on the flagship computer.
+Also use when the operator says **set up Latitude for customer X** (including thin pilots like Budgetdog) — create a **dedicated project** + wire emission on the flagship computer.
 
 ## New customer project (CLI)
 
-Never put customer agents into `dewey`.
+Never put customer agents into `feina-ops`.
 
 ```bash
 set -a; . /root/.hermes/scripts/latitude/env.sh; set +a   # or LATITUDE_API_KEY from secrets
@@ -17,7 +17,7 @@ latitude projects list --format json
 
 | Customer | Project slug | Service pattern |
 |---|---|---|
-| Nick / internal | `dewey` | Dewey only |
+| the operator / internal | `feina-ops` | Feina ops host only |
 | Momentum fleet | `momentumclaw` | `hermes-<id8>` |
 | Brennan / Budgetdog | `budgetdog` | `hermes-e3741a9a` |
 
@@ -33,7 +33,7 @@ Config files alone + OpenAI/Anthropic instrumentors often leave the Latitude UI 
 
 1. Create project slug (above).
 2. Install package on the **gateway venv**:
-   - Copy Dewey’s `~/.hermes/local-packages/latitude-telemetry-hermes` to the VM (tar/base64 via Orgo exec).
+   - Copy Feina ops host’s `~/.hermes/local-packages/latitude-telemetry-hermes` to the VM (tar/base64 via Orgo exec).
    - `pip install -e` into `/usr/local/lib/hermes-agent/venv`.
 3. Patch `~/.hermes/.env` (quote values with spaces):
    ```bash
@@ -55,7 +55,7 @@ Config files alone + OpenAI/Anthropic instrumentors often leave the Latitude UI 
    set -a; source ~/.hermes/.env; set +a
    hermes chat -Q --accept-hooks --max-turns 1 -q 'Reply with exactly: latitude-ok'
    ```
-7. Verify from Dewey:
+7. Verify from Feina ops host:
    ```bash
    latitude traces list --project-slug budgetdog --format json
    # expect rootSpanName interaction (and optional smoke test)
@@ -105,7 +105,7 @@ Always verify **import + env in running process + `traces list` non-empty**, not
 
 | Check | Action |
 |---|---|
-| Project exists, 0 traces | Smoke test from Dewey (below), then plugin path + `hermes chat -Q` |
+| Project exists, 0 traces | Smoke test from Feina ops host (below), then plugin path + `hermes chat -Q` |
 | Smoke OK, no `interaction` | Plugin not enabled / gateway without `LATITUDE_*` env / no LLM turn yet |
 | Traces list has rows, UI empty | Hard-refresh browser; confirm project slug matches |
 | Tokens > 0, cost $0 | Normal for some OpenRouter/Grok routes until Latitude pricing maps; report tokens + cost separately |
@@ -151,9 +151,9 @@ Content-Type: application/json
 
 Working wrapper: stage base64 installer on the VM → `subprocess.run([py, path], env={...})` → print stdout/stderr/exit only.
 
-### Host terminal guard (Dewey)
+### Host terminal guard (Feina ops host)
 
-Running Hermes on Dewey may **block host terminal** commands whose source contains gateway kill/restart phrases (even when the kill is only in remote payload strings). Prefer:
+Running Hermes on Feina ops host may **block host terminal** commands whose source contains gateway kill/restart phrases (even when the kill is only in remote payload strings). Prefer:
 
 - Orgo MCP `orgo_bash` / REST exec for **all** remote gateway process management
 - Avoid putting `pkill … hermes gateway` / `hermes gateway restart` in the **local** tool command text
@@ -185,10 +185,10 @@ Running Hermes on Dewey may **block host terminal** commands whose source contai
 2. Load `LATITUDE_API_KEY` from secret manager (never vault/print).
 3. Target **Hermes-running** boxes only.
 4. Prefer **plugin path (A)** for single-box pilots; fleet may use provision/bootstrap (B).
-5. Tell Nick: spend starts after post-setup traffic; empty UI ≠ no project.
+5. Tell the operator: spend starts after post-setup traffic; empty UI ≠ no project.
 6. Smoke test + force `hermes chat -Q` if needed; re-check `traces list`.
 
-## Dewey helpers
+## Feina ops host helpers
 
 - `~/.hermes/scripts/momentum/backfill-latitude-otel.sh` — Momentum default project; override `LATITUDE_PROJECT`. Pins must match the **working set** (no anthropic 0.53.0).
 - `~/.hermes/scripts/latitude/send_test_trace.py` — OTLP smoke with `X-Latitude-Project`.
@@ -198,4 +198,4 @@ Vault examples: `projects/momentum-amp/hermes-fleet.md`, `projects/budgetdog-ops
 
 ## Product source of truth for *new* VMs
 
-Customer workbench provision (e.g. `nickvasilescu/momentumclaw` `src/lib/provision.ts` → `configure-gateway`) installs Latitude fail-open for **new** provisions (project default often `momentumclaw`). Backfill is for pre-provision boxes, incomplete installs, or **non-Momentum customers** (Budgetdog, etc.).
+Customer workbench provision (e.g. `victorioussol/momentumclaw` `src/lib/provision.ts` → `configure-gateway`) installs Latitude fail-open for **new** provisions (project default often `momentumclaw`). Backfill is for pre-provision boxes, incomplete installs, or **non-Momentum customers** (Budgetdog, etc.).

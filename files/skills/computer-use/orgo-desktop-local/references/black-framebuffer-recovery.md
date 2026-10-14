@@ -43,7 +43,7 @@ ps -eo pid,cmd | awk '/\/opt\/google\/chrome\/chrome/ && !/awk/ {print $1}' | wh
 
 Do **not** use `pkill -f chrome` from a command that contains the string `chrome` in its own argv.
 
-## Recovery (session-proven on Dewey Orgo)
+## Recovery (session-proven on Feina ops host Orgo)
 
 Hermes `terminal` **rejects** foreground `nohup`/`&`. Use `background=true` for Xvnc, or Python `start_new_session=True` for session clients.
 

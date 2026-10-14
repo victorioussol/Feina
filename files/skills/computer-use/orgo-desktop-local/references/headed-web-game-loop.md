@@ -26,7 +26,7 @@ them. Use client/CLI and say so.
 
 ## Control loop
 
-1. Screenshot full desktop (1280×720 on Dewey).
+1. Screenshot full desktop (1280×720 on Feina ops host).
 2. Plan **one** action from pixels (or URL open).
 3. Execute via Desktop API (`click` / `key` / `type` / `open_url` / `bash`).
 4. `wait` (0.5–3s depending on SPA).
@@ -47,7 +47,7 @@ When a labeled button is missed twice:
 5. Confirm success by state change (title, new modal fields, board appear), not by API
    `success: true` alone.
 
-Observed Dewey 1280×720 Lichess AI setup (one session; re-measure always):
+Observed Feina ops host 1280×720 Lichess AI setup (one session; re-measure always):
 
 | Target | Approx center |
 |---|---|
@@ -71,7 +71,7 @@ y = bottom - (rank + 0.5) * sq  # rank 0=1 .. 7=8
 6. After each move: wait for engine (~2–3s at low strength), screenshot, read move list /
    check highlights, then choose the next move.
 
-Example map from one Dewey game (do not hardcode forever): board ≈ 388,177–835,624,
+Example map from one Feina ops host game (do not hardcode forever): board ≈ 388,177–835,624,
 sq ≈ 56 → e2 (640,540), e4 (640,428).
 
 ## Lichess vs computer smoke (local API only)

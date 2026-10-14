@@ -1,11 +1,11 @@
 # Composio YouTube: own-channel recent video stats
 
-When user asks for views / latest upload on **their** connected YouTube (operator Composio connection is Nick’s channel unless noted).
+When user asks for views / latest upload on **their** connected YouTube (operator Composio connection is the operator’s channel unless noted).
 
 ## Workflow
 
 1. `COMPOSIO_SEARCH_TOOLS` session `generate_id: true`, use cases naming YouTube (list channel videos, get statistics, video details batch).
-2. Confirm `toolkit_connection_statuses.youtube.has_active_connection` and channel handle from connection user_info (e.g. `@nickvasiles`).
+2. Confirm `toolkit_connection_statuses.youtube.has_active_connection` and channel handle from connection user_info (e.g. `@example-channel`).
 3. Parallel via `COMPOSIO_MULTI_EXECUTE_TOOL` + `session_id`:
    - `YOUTUBE_GET_CHANNEL_STATISTICS` `{mine: true, part: "snippet,statistics,contentDetails"}`
    - `YOUTUBE_LIST_CHANNEL_VIDEOS` `{mine: true, maxResults: 5}`
