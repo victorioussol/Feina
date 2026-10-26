@@ -86,11 +86,24 @@ def gateway(tmp_path, monkeypatch, request):
     hermes.chmod(0o755)
     monkeypatch.setenv("PATH", str(bin_dir) + os.pathsep + os.environ["PATH"])
     wrapper = tmp_path / "gateway-run.sh"
+    shape = getattr(request, "param", "current")
+    if shape in {"module", "inline"}:
+        package = bin_dir / "hermes_cli"
+        package.mkdir()
+        (package / "__init__.py").touch()
+        (package / "main.py").write_text(FAKE_HERMES)
+        if shape == "module":
+            hermes.write_text(f'#!/bin/sh\ncd "{bin_dir}"\nexec "{sys.executable}" -m hermes_cli.main "$@"\n')
+        else:
+            bootstrap = f"import sys; sys.path.insert(0, {str(bin_dir)!r}); import hermes_cli.main"
+            # Exactly the published launcher shape: shell execs Python -I -c.
+            import shlex
+            hermes.write_text(f'#!/bin/sh\nexec "{sys.executable}" -I -c {shlex.quote(bootstrap)} "$@"\n')
     source = (ROOT / "files/gateway-run.sh").read_text()
     # Only relocate the fixed VM filesystem layout; keep production lock/exec logic.
     source = source.replace('/root', str(tmp_path / 'home')).replace('/var/lib/orgo', str(state))
     mod.current_wrapper_source = source
-    legacy = getattr(request, "param", "current") == "legacy"
+    legacy = shape == "legacy"
     if legacy:
         source = source[:source.index('# Inherit the lock')] + (
             'exec flock ' + str(state / 'hermes-gateway.lock') + ' hermes gateway run --replace --accept-hooks\n')
@@ -138,18 +151,32 @@ stderr_logfile={tmp_path}/gateway.err
                 argv = Path(f"/proc/{proc.pid}/cmdline").read_bytes().split(b"\0")
             except FileNotFoundError:
                 continue
-            if os.fsencode(hermes) in argv:
+            owned = (os.fsencode(hermes) in argv
+                     or (b"-m" in argv and Path(f"/proc/{proc.pid}/cwd").resolve() == bin_dir)
+                     or any(os.fsencode(bin_dir) in arg for arg in argv))
+            if owned:
                 mod.signal_old(proc, signal.SIGKILL)
 
 
-def test_restart_delivers_term_changes_pid_and_preserves_exclusivity(gateway):
+@pytest.mark.parametrize("gateway", ["current", "module", "inline"], indirect=True)
+def test_restart_delivers_term_changes_pid_and_preserves_exclusivity(gateway, monkeypatch):
     mod, wrapper, old = gateway
     assert mod.supervisor("pid", "hermes-gateway") == str(old.pid)
     started = time.monotonic()
     second = subprocess.run([str(wrapper)], capture_output=True, text=True, timeout=2)
     assert second.returncode != 0 and 'gateway already running' in second.stderr
     assert time.monotonic() - started < 2
+    real_link = os.link
+    published = []
+    def observe_publication(source, dest):
+        # A watcher can read as soon as link makes the marker visible.
+        real_link(source, dest)
+        body = json.loads(Path(dest).read_text())
+        assert body["suppress_notification"] is True and body["action"] == "drain"
+        published.append(body)
+    monkeypatch.setattr(os, "link", observe_publication)
     mod.restart()
+    assert len(published) == 1
     current = mod.gateways()
     assert len(current) == 1 and current[0].pid != old.pid
     assert mod.process(old.pid) is None
@@ -230,6 +257,31 @@ def test_failed_replacement_is_reported(gateway):
     assert mod.process(old.pid) is None
     assert not mod.gateways()
     assert not (mod.HOME / '.drain_request.json').exists()
+
+
+def test_replaced_drain_marker_belongs_to_other_operator(gateway, monkeypatch):
+    mod, _, old = gateway
+    real = os.link
+    def replace_after_publish(source, dest):
+        real(source, dest)
+        foreign = mod.HOME / 'foreign-marker'
+        foreign.write_text('{"principal":"other-operator","suppress_notification":true}')
+        foreign.replace(dest)
+    monkeypatch.setattr(os, 'link', replace_after_publish)
+    with pytest.raises(mod.Refused, match='another operation'):
+        mod.restart()
+    assert mod.process(old.pid) == old
+    assert json.loads((mod.HOME / '.drain_request.json').read_text())['principal'] == 'other-operator'
+    assert not (mod.HOME / 'term.log').exists()
+
+
+def test_unrecognized_supervised_process_cannot_bypass_activity_gate(gateway, monkeypatch):
+    mod, _, old = gateway
+    monkeypatch.setattr(mod, 'gateways', lambda: [])
+    with pytest.raises(mod.Refused, match='unknown activity'):
+        mod.restart()
+    assert mod.process(old.pid) == old
+    assert not (mod.HOME / 'term.log').exists()
 
 
 def test_parallel_restart_is_refused_without_stopping(gateway, monkeypatch):

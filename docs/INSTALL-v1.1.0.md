@@ -49,7 +49,9 @@ unit, and confirm the client has been idle for at least two minutes. This repo
 change grants no live approval. Never invoke it from an agent turn.
 
 `feina-gateway-restart` refuses active turns, unknown/mismatched activity state,
-multiple gateways, another restart, or an existing drain request. It checks
+multiple gateways, another restart, or an existing drain request. It publishes
+the quiet drain atomically and leaves another operation's replacement marker
+untouched. It checks
 `~/.hermes/gateway_state.json` (PID, Linux start time and `active_agents`), requests
 a quiet drain, waits for the same gateway to acknowledge `draining` with zero
 active agents, then stops the supervised program. The drain prevents a new turn
@@ -84,7 +86,10 @@ Linux process cases skip; run `scripts/test-gateway-linux.sh` to run the full
 suite in a disposable local Linux container with fake Hermes and real
 supervisord/flock/pgrep. The tests prove graceful TERM, changed single PID,
 lock exclusion, busy/unknown/racing-turn refusal, legacy-orphan recovery,
-TERM-before-KILL, duplicate refusal, and failed-start reporting.
+TERM-before-KILL, duplicate refusal, failed-start reporting, and marker ownership.
+The process tests cover direct, Python module and published inline-bootstrap
+launcher shapes. Provider-generated units and live lifecycle behavior still
+require FEI-46 preflight.
 
 ## Client file
 
