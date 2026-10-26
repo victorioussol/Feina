@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -12,6 +13,7 @@ sys.path.insert(0, str(ROOT / "files" / "scripts"))
 sys.path.insert(0, str(ROOT))
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
+_AFSA_SHIM = Path(__file__).resolve().parent / "afsa_isolate"
 
 
 @pytest.fixture
@@ -26,3 +28,20 @@ def client(tmp_path, monkeypatch):
 @pytest.fixture
 def fixtures() -> Path:
     return FIXTURES
+
+
+@pytest.fixture(autouse=True)
+def afsa_state(tmp_path, monkeypatch):
+    """Point the approved check's hardcoded ledger at a temp directory.
+
+    The child process loads tests/afsa_isolate/sitecustomize.py. The wall
+    clock is left alone: afsa_checks.py does not read an env var for it, and
+    datetime.datetime.now cannot be replaced from outside that file.
+    """
+    state = tmp_path / "af-ingresos"
+    (state / "runs").mkdir(parents=True)
+    monkeypatch.setenv("FEINA_AFSA_STATE_DIR", str(state))
+    current = os.environ.get("PYTHONPATH", "")
+    prefix = str(_AFSA_SHIM)
+    monkeypatch.setenv("PYTHONPATH", prefix + (os.pathsep + current if current else ""))
+    return state

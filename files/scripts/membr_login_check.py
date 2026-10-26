@@ -13,7 +13,7 @@ from feina_client.cliutil import enabled, host_ready, membr_config  # noqa: E402
 from feina_client.download import NoProfile, assert_club_url  # noqa: E402
 from feina_client.login_page import detect_login_wall  # noqa: E402
 from feina_client.runtime import client_root, madrid_now, post_ops_alert, read_json, write_json  # noqa: E402
-from feina_client.session import apply_login_check, earliest_expiry  # noqa: E402
+from feina_client.session import apply_login_check  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -27,7 +27,6 @@ def main(argv: list[str] | None = None) -> int:
     state = read_json(state_path)
     now = madrid_now()
     page_status = "no_profile"
-    expiry = None
     try:
         session = open_session(cfg)
     except NoProfile:
@@ -37,9 +36,10 @@ def main(argv: list[str] | None = None) -> int:
             club = str(cfg["club_base_url"])
             assert_club_url(club, club)
             session.goto(club)
+            # The dashboard, the login form, or a captcha. Page storage holds
+            # the Membr login; cookie names are not consulted.
             wall = detect_login_wall(session.url(), session.content())
             page_status = wall or "ok"
-            expiry = earliest_expiry(session.cookies(), tuple((cfg.get("browser") or {}).get("cookie_names") or ()))
     except Exception:
         post_ops_alert("session_check_failed", part="membr-login-guard", when=now)
         write_json(state_path, state)
@@ -47,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         if session is not None:
             session.close()
-    ok, reason = apply_login_check(state, now=now, page_status=page_status, token_expiry=expiry)
+    ok, reason = apply_login_check(state, now=now, page_status=page_status)
     write_json(state_path, state)
     if not ok:
         code = reason if reason in {"login_page", "captcha", "token_expiry", "unknown_expiry", "no_profile"} else "session_check_failed"

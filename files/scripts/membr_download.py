@@ -2,6 +2,8 @@
 """Download Membr Excel reports from the already logged-in club browser.
 
 Exit 10 means LOGIN_REQUIRED. The script then stops. It does not log in.
+Exit 2 means the run stopped: GYM_FILTER_UNVERIFIED, SCREEN_MISMATCH,
+EMPTY_DAY_NEEDS_CONFIRMATION, or another failure. Exit 0 is OK or INSPECTED.
 """
 
 from __future__ import annotations

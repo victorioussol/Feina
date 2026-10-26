@@ -1,20 +1,23 @@
-# Selectors that still need the supervised inspect run
+# Selectors checked on 26 Oct 2026
 
-Nothing in this file was checked against Vince's live Membr. The script refuses to run while `club_base_url` still contains `REPLACE_CLUB`.
+One supervised `--inspect` on the club admin, then Membr Insights. `club_base_url` still has to replace `REPLACE_CLUB` before the script will run. The script opens that host and `allowed_hosts` only.
 
-| Step | What we know from public docs or the brief | What is a guess |
+| Step | What the live run showed | What is still open |
 |---|---|---|
-| Club host | Staff sign in at `yourclub.membr.com` | The real host string for Sant Adrià |
-| Reports → Membr Report | Zendesk says the left nav is Reports, then Membr Report | Spanish labels, and every CSS selector |
-| My Reports | The EU Report Builder manual names My Reports and My Data | "Mis informes", and how the menu is marked up |
-| Transacción Punto de Venta | The AFSA job uses this Spanish name. The EU POS manual's English name is "POS Transactions Report" | Which of those strings the Spanish club actually shows |
-| Date fields | The manual says dates are listed on the left and open a date picker | `input[name='dateFrom']` and `input[name='dateTo']` |
-| Run Report | The EU manual tells the user to click Run Report | "Ejecutar informe" and the button's selector |
-| Download | The manual says Download exports all pages to Excel | `button:has-text('Download')`, Descargar, Export, Excel |
-| Saved file | `afsa_checks.py export` reads `runs/<date>/pos-export.xlsx`. It must be Membr's own workbook: sheets `Informe` and `Informe Meta Data`, report name `Transaccion Punto de Venta` | The download script saves Membr's file under that name. It does not rebuild the sheets. If Membr's export uses other sheet names, `export` fails and the day stops |
-| On-screen count and total | The text Membr shows is stored on the manifest. `export` does not read it, and a month-long export may count other days | `.report-row-count`, `[data-row-count]`, `.report-total`, `[data-report-total]` |
-| member_payments | Not named as a specific menu entry in the manuals we used | The whole report. It ships `enabled: false` |
-| direct_debits | Same | The whole report. It ships `enabled: false` |
-| Cookie names | A session lasts about 24 hours in Vince's history. That duration is observed, not documented | `PHPSESSID`, `membr_session`, `MEMBRSESSID`, `remember_me`, `access_token` |
+| Hosts | Club admin, then a new tab on `insights.eu.membr.com` | The real club host string. No other host is allowed |
+| Tabs | Sidebar `Informes` is `a.Aside-menu-link.has-subMenu`. The child `a.Aside-submenu-link` (`sendTokenToReportBuilder`) opens Insights at `/home` | The script opens its own tab and closes only tabs it opened |
+| My Reports | Insights top nav: My Data, My Reports | |
+| Transaction Reports | Categories include Access, Booking, Email, Member, Package, Prospect Reports, Session Packs, Transaction Reports, PT Reports | |
+| POS Transactions | Exact label. Siblings on that menu: Cash Register, Past Transactions | |
+| Dates | `input[name='from']` and `input[name='until']`, plain `YYYY-MM-DD` fill. Export metadata showed 00:00:00 and 23:59:59 | Whether that filter is UTC or Europe/Madrid. Manifest field `date_filter_timezone` stays `unverified`. Download-time metadata on the export is UTC |
+| Gym | Select Gyms shows 2 gyms selected. The config name is `Anytime Fitness Sant Adrià`. The run stops with `GYM_FILTER_UNVERIFIED` unless the screen shows only that name before Run Report | The remove control was not given a CSS selector in the live notes. The script clicks an accessible `Remove {gym}` control and stops if the read-back is anything else |
+| Run Report | Button text `Run Report`. Wait until `<b>N</b> total rows` has settled | |
+| On-screen count | `N` is stored on the manifest. There is no money total. `Oops, an error has occurred` beside `0 total rows` is a failed run | |
+| Download | `Download Report` opens a menu: (.csv), (.json), (.xlsx). The script clicks `Download Report (.xlsx)` and keeps Membr's bytes | |
+| Saved file | `runs/<date>/pos-export.xlsx` plus sha256. Data rows are the non-empty rows after the header on sheet `Report`. A mismatch with `N` is `SCREEN_MISMATCH`. Both counts 0 is `EMPTY_DAY_NEEDS_CONFIRMATION` | |
+| Workbook names | Sheets `Report` and `Report Meta Data`. Report name `POS Transaction` | `afsa_checks.py` (vendored, unmodified) accepts `Informe`, `Informe Meta Data`, and `Transaccion Punto de Venta`. A download OK is not an export PASS |
+| Session | The dashboard versus the login form or a captcha. Login is in page storage | Cookies seen were `__stripe_*`, `_hj*`, `AWSALB*`. They are not a login signal |
+| member_payments | Disabled | The whole report |
+| direct_debits | Disabled. Harlands is a separate inbox file | The whole report |
 
-`--inspect` writes `runs/<date>/manifest.json` plus page snapshots (tags, ids, names, visible labels). It does not download and it does not log in. Fix `membr.reports.yaml` from that file, then run one real download while someone watches.
+`--inspect` waits for visible controls and for network idle, then writes `runs/<date>/manifest.json` with menus, inputs, and buttons. It does not download and it does not log in.

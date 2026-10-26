@@ -96,6 +96,22 @@ def test_client_scripts_do_not_log_in_or_call_hidden_membr_apis():
     assert "keep-alive" not in browser.lower()
     assert "SELECT host_key, name, creation_utc, expires_utc FROM cookies" in session
     assert "encrypted_value" not in session.split("SELECT", 1)[-1].split("FROM", 1)[0]
+    assert "GUESSED_COOKIE_NAMES" not in session
+    assert "PHPSESSID" not in session
+    assert "pages[0]" not in browser
+    login_check = (SCRIPTS / "membr_login_check.py").read_text(encoding="utf-8")
+    assert "cookie_names" not in login_check
+    assert "earliest_expiry" not in login_check
+    approved = ROOT / "files" / "skills" / "client-drop" / "afsa-ingresos" / "approved"
+    checks = (approved / "afsa_checks.py").read_bytes()
+    recorded = json.loads((approved / "hashes.json").read_text(encoding="utf-8"))
+    assert hashlib.sha256(checks).hexdigest() == recorded["files"]["afsa_checks.py"]
+    text = checks.decode("utf-8")
+    assert "Informe Meta Data" in text
+    assert "Transaccion Punto de Venta" in text
+    assert "Report Meta Data" not in text
+    assert "Anytime Fitness Sant Adria" in text
+    assert "Sant Adrià" not in text
 
 
 def test_cron_lines_match_jobs_that_need_arguments():

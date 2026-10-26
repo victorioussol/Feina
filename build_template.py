@@ -29,7 +29,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FILES = os.path.join(HERE, "files")
 NAMESPACE = "default"
 NAME = "feina-stack"
-VERSION = os.environ.get("VERSION", "1.1.0")
+VERSION = os.environ.get("VERSION", "1.1.1")
 API_BASE = os.environ.get("ORGO_API_BASE", "https://www.orgo.ai/api")
 API_KEY = os.environ.get("ORGO_API_KEY", "")
 

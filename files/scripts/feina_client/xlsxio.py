@@ -42,6 +42,11 @@ def _q(tag: str) -> str:
 
 def read_xlsx(path: Path) -> list[list[list[str]]]:
     """Return a list of sheets, each a list of rows of strings."""
+    return list(read_xlsx_named(path).values())
+
+
+def read_xlsx_named(path: Path) -> dict[str, list[list[str]]]:
+    """Sheets by name. Cell text stays in the returned tables."""
     with zipfile.ZipFile(path) as zf:
         shared: list[str] = []
         if "xl/sharedStrings.xml" in zf.namelist():
@@ -52,14 +57,34 @@ def read_xlsx(path: Path) -> list[list[list[str]]]:
         workbook = ET.fromstring(zf.read("xl/workbook.xml"))
         rels = ET.fromstring(zf.read("xl/_rels/workbook.xml.rels"))
         rel_map = {rel.attrib["Id"]: rel.attrib["Target"] for rel in rels}
-        sheets = []
+        sheets: dict[str, list[list[str]]] = {}
         for sheet in workbook.find(_q("sheets")).findall(_q("sheet")):
+            name = sheet.attrib.get("name") or ""
             rid = sheet.attrib.get(f"{{{REL}}}id")
             target = rel_map[rid]
             if not target.startswith("xl/"):
                 target = "xl/" + target.lstrip("/")
-            sheets.append(_read_sheet(ET.fromstring(zf.read(target)), shared))
+            sheets[name] = _read_sheet(ET.fromstring(zf.read(target)), shared)
     return sheets
+
+
+def count_data_rows(path: Path, sheet_name: str) -> int | None:
+    """Non-empty rows after the first row of sheet_name.
+
+    The first row is the header and is not counted. None means that sheet is
+    absent. Cell values are not returned.
+    """
+    tables = read_xlsx_named(path)
+    if sheet_name not in tables:
+        return None
+    rows = tables[sheet_name]
+    if len(rows) <= 1:
+        return 0
+    count = 0
+    for row in rows[1:]:
+        if any(str(cell).strip() for cell in row):
+            count += 1
+    return count
 
 
 def _read_sheet(root: ET.Element, shared: list[str]) -> list[list[str]]:

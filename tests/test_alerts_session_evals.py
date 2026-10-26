@@ -106,10 +106,18 @@ def test_session_covers_0400_without_sliding_the_login_clock():
     assert ok is True and reason == "observed_24h"
 
 
-def test_playwright_expiry_is_not_read_as_chrome_microseconds():
+def test_cookies_are_not_a_membr_login_signal():
     when = at(2026, 10, 26, 12, 0)
-    rows = [{"host": "club.membr.com", "name": "PHPSESSID", "expires_at": when}]
-    assert earliest_expiry(rows) == when
+    rows = [
+        {"host": ".membr.com", "name": "__stripe_mid", "expires_at": when},
+        {"host": ".membr.com", "name": "_hjSessionUser_1", "expires_at": when},
+        {"host": ".membr.com", "name": "AWSALB", "expires_at": when},
+        {"host": ".membr.com", "name": "PHPSESSID", "expires_at": when},
+    ]
+    assert earliest_expiry(rows) is None
+    assert earliest_expiry(rows, ()) is None
+    # A datetime expiry is used as a datetime. It is not Chrome microseconds.
+    assert earliest_expiry(rows, ("PHPSESSID",)) == when
 
 
 def test_workbook_step_and_session_evals(tmp_path):

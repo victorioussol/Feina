@@ -115,7 +115,7 @@ feina-onboard setup-pre
 # … model-codex, telegram, secrets, safety-check
 ```
 
-## Client reliability parts (template v1.1.0)
+## Client reliability parts (template v1.1.1)
 
 Membr download, the login check and one re-run, Telegram background jobs, proactive starters, and the no-LLM evals ship in the image and stay off. Turning a part on for a client computer is a separate step that a person approves. See [docs/INSTALL-v1.1.0.md](docs/INSTALL-v1.1.0.md) and [docs/CHANGELOG.md](docs/CHANGELOG.md).
 
@@ -123,7 +123,7 @@ Membr download, the login check and one re-run, Telegram background jobs, proact
 
 ```bash
 python3 build_template.py
-# VERSION defaults to 1.1.0. --build needs ORGO_API_KEY and is not a client install.
+# VERSION defaults to 1.1.1. --build needs ORGO_API_KEY and is not a client install.
 ```
 
 ## Credit
