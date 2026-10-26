@@ -25,5 +25,5 @@ Enable flags live at `/root/.hermes/feina-client/enabled/<part>`:
 Restart the gateway after copying skill files:
 
 ```bash
-supervisorctl restart hermes-gateway
+feina-gateway-restart
 ```

@@ -103,17 +103,11 @@ hermes mcp test obsidian-vault || { echo "MCP test failed — restoring $BAK"; [
 
 # 5) Restart the gateway so Telegram etc. pick up the new tools
 if [ "$RESTART_GATEWAY" = "1" ] && [ "$CHANGED" = "yes" ]; then
-  if supervisorctl status hermes-gateway >/dev/null 2>&1; then
-    supervisorctl restart hermes-gateway                       # Orgo template (supervisord)
-  elif systemctl list-unit-files 2>/dev/null | grep -q hermes-gateway; then
-    systemctl restart hermes-gateway
-  else
-    echo "No supervised gateway found — restart it manually (hermes gateway restart / re-run)."
-  fi
+  feina-gateway-restart
   sleep 20
   if ! supervisorctl status hermes-gateway 2>/dev/null | grep -q RUNNING; then
     echo "Gateway not RUNNING after restart — restoring $BAK"; cp -p "$BAK" "$CFG"
-    supervisorctl restart hermes-gateway || true; exit 1
+    feina-gateway-restart; exit 1
   fi
   tail -n 40 /var/log/orgo/hermes-gateway.err 2>/dev/null | grep -i "telegram\|mcp" | tail -5 || true
 fi

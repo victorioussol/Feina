@@ -88,7 +88,7 @@ if uid not in ids: ids.append(uid)
 save_env_value("TELEGRAM_ALLOWED_USERS", ",".join(ids))
 print("TELEGRAM_ALLOWED_USERS=", ",".join(ids))
 PY
-  supervisorctl restart hermes-gateway 2>/dev/null || true
+  feina-gateway-restart
 }
 
 PRE_SETUP_DOC=$(cat <<'EOF'
@@ -164,7 +164,7 @@ case "$cmd" in
     TOK="${1:?BotFather token}"
     append_env TELEGRAM_BOT_TOKEN "$TOK"
     # Client allowlist is added after they tap Start (allow-telegram).
-    supervisorctl restart hermes-gateway 2>/dev/null || true
+    feina-gateway-restart
     echo "TELEGRAM_BOT_TOKEN set. Run: feina-onboard gateway-test"
     ;;
   telegram-qr)
@@ -189,7 +189,7 @@ case "$cmd" in
     fi
     if ! supervisorctl status hermes-gateway 2>/dev/null | grep -q RUNNING; then
       echo "WARN: hermes-gateway not RUNNING under supervisor — starting…"
-      supervisorctl start hermes-gateway 2>/dev/null || true
+      feina-gateway-restart
       sleep 3
     fi
     ME=$(curl -fsS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('result',{}).get('username','?') if d.get('ok') else 'ERR')" 2>/dev/null || echo ERR)
@@ -246,18 +246,18 @@ case "$cmd" in
     ;;
   composio)
     append_env COMPOSIO_CONSUMER_KEY "${1:?ck_ key}"
-    supervisorctl restart hermes-gateway 2>/dev/null || true
+    feina-gateway-restart
     echo "Composio key installed (in-meeting step)."
     ;;
   agentmail)
     append_env AGENTMAIL_API_KEY "${1:?am_ key}"
     [ -n "${2:-}" ] && append_env AGENTMAIL_INBOX "$2"
-    supervisorctl restart hermes-gateway 2>/dev/null || true
+    feina-gateway-restart
     ;;
   latitude)
     append_env LATITUDE_API_KEY "${1:?key}"
     append_env LATITUDE_PROJECT "${2:?project slug}"
-    supervisorctl restart hermes-gateway 2>/dev/null || true
+    feina-gateway-restart
     ;;
   op-token)
     TOK="${1:?ops_ token}"
@@ -268,17 +268,17 @@ case "$cmd" in
     # shellcheck disable=SC1090
     set -a; [ -f "$OP_ENV" ] && . "$OP_ENV"; [ -f "$ENV_FILE" ] && . "$ENV_FILE"; set +a
     python3 /usr/local/bin/feina-honcho-sync.py 2>/dev/null || true
-    supervisorctl restart hermes-gateway 2>/dev/null || true
+    feina-gateway-restart
     ;;
   honcho)
     append_env HONCHO_API_KEY "${1:?honcho workspace-scoped api key}"
     python3 /usr/local/bin/feina-honcho-sync.py 2>/dev/null || true
-    supervisorctl restart hermes-gateway 2>/dev/null || true
+    feina-gateway-restart
     ;;
   honcho-apply)
     python3 /usr/local/bin/feina-honcho-apply.py
     python3 /usr/local/bin/feina-honcho-sync.py 2>/dev/null || true
-    supervisorctl restart hermes-gateway 2>/dev/null || true
+    feina-gateway-restart
     ;;
   status)
     echo "=== feina-onboard status ==="

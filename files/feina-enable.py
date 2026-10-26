@@ -148,7 +148,7 @@ def agentphone_bridge(on: bool):
 
 
 def restart_gateway():
-    subprocess.run(["supervisorctl", "restart", "hermes-gateway"], check=False)
+    subprocess.run(["feina-gateway-restart"], check=True)
 
 
 def cmd_list(cfg):

@@ -103,6 +103,7 @@ files = [
     F(f"{STAGE}/hermes/SOUL.md", rd("SOUL.md"), "0644"),
     F(f"{STAGE}/hermes/env", rd("hermes.env"), "0600"),
     F(f"{STAGE}/gateway-run.sh", rd("gateway-run.sh"), "0755"),
+    F(f"{STAGE}/feina-gateway-restart", rd("feina-gateway-restart"), "0755"),
     F(f"{STAGE}/feina-onboard.sh", rd("feina-onboard.sh"), "0755"),
     F(f"{STAGE}/telegram-pair.py", rd("telegram-pair.py"), "0755"),
     F(f"{STAGE}/op-enable.py", rd("op-enable.py"), "0755"),
@@ -113,6 +114,7 @@ files = [
     F(f"{STAGE}/vault/.obsidian/appearance.json", rd("vault/.obsidian/appearance.json"), "0644"),
     F(f"{STAGE}/vault/.obsidian/core-plugins.json", rd("vault/.obsidian/core-plugins.json"), "0644"),
     F("/usr/local/bin/hermes-gateway-run.sh", rd("gateway-run.sh"), "0755"),
+    F("/usr/local/bin/feina-gateway-restart", rd("feina-gateway-restart"), "0755"),
     F("/usr/local/bin/feina-onboard.sh", rd("feina-onboard.sh"), "0755"),
     F("/usr/local/bin/feina-stack-telegram-pair.py", rd("telegram-pair.py"), "0755"),
     F("/usr/local/bin/feina-stack-op-enable", rd("op-enable.py"), "0755"),
@@ -170,7 +172,7 @@ if [ -n "$OPTOK" ]; then
   printf 'OP_SERVICE_ACCOUNT_TOKEN=%s\\n' "$OPTOK" > /root/.hermes/.op.env
 fi
 python3 /usr/local/bin/feina-stack-op-enable 2>/dev/null || true
-supervisorctl restart hermes-gateway 2>/dev/null || true
+if [ -s /root/.hermes/auth.json ]; then feina-gateway-restart; fi
 """.strip()
 
 template = {

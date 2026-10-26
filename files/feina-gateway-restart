@@ -1,0 +1,269 @@
+#!/usr/bin/env python3
+"""Guarded restart for the single Linux/supervisord Hermes gateway.
+
+Uses the gateway_state.json and quiet drain marker contracts at the Hermes pin.
+Never imports Hermes, reads credentials, or sends a client notification.
+"""
+from __future__ import annotations
+
+import fcntl
+import json
+import os
+import signal
+import re
+import subprocess
+import sys
+import time
+import tempfile
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+
+HOME = Path(os.environ.get("HERMES_HOME", "/root/.hermes"))
+STATE = Path("/var/lib/orgo")
+WAIT = 30.0
+
+
+class Refused(RuntimeError):
+    pass
+
+
+@dataclass(frozen=True)
+class Process:
+    pid: int
+    start: int
+    group: int
+
+
+def process(pid: int) -> Process | None:
+    try:
+        fields = Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()
+        if fields[0] == "Z":
+            return None
+        return Process(pid, int(fields[19]), int(fields[2]))
+    except FileNotFoundError:
+        return None
+
+
+def gateway_command(argv: list[str]) -> bool:
+    if not argv:
+        return False
+    executable = Path(argv[0]).name
+    if executable == "hermes":
+        return argv[1:3] == ["gateway", "run"]
+    if not re.fullmatch(r"python[0-9.]*", executable):
+        return False
+    if len(argv) > 1 and (Path(argv[1]).name == "hermes" or argv[1].endswith("/hermes_cli/main.py")):
+        return argv[2:4] == ["gateway", "run"]
+    if "-m" in argv:
+        i = argv.index("-m")
+        return argv[i + 1:i + 4] == ["hermes_cli.main", "gateway", "run"]
+    if "-c" in argv:
+        i = argv.index("-c")
+        return (len(argv) > i + 1 and "hermes_cli.main" in argv[i + 1]
+                and argv[i + 2:i + 4] == ["gateway", "run"])
+    return False
+
+
+def gateways() -> list[Process]:
+    # Published Hermes bin/hermes execs Python -I -c <bootstrap>; the literal
+    # "hermes gateway run" is absent. Match candidates broadly, then parse argv
+    # so shell text/flock parents cannot be mistaken for the actual gateway.
+    found = subprocess.run(["pgrep", "-f", "[h]ermes|[g]ateway"], capture_output=True, text=True)
+    if found.returncode not in (0, 1):
+        raise Refused("gateway process scan failed")
+    result = []
+    for raw in found.stdout.split():
+        pid = int(raw)
+        try:
+            argv = Path(f"/proc/{pid}/cmdline").read_bytes().decode().rstrip("\0").split("\0")
+        except FileNotFoundError:
+            continue
+        if not gateway_command(argv):
+            continue
+        entry = process(pid)
+        if entry:
+            result.append(entry)
+    return result
+
+
+def runtime(expected: Process, *, idle: bool, state: str | tuple[str, ...] = "running") -> str:
+    try:
+        body = json.loads((HOME / "gateway_state.json").read_text())
+    except (OSError, ValueError):
+        raise Refused("gateway activity is unknown; no stop performed") from None
+    if not isinstance(body, dict) or body.get("pid") != expected.pid or body.get("start_time") != expected.start:
+        raise Refused("gateway status does not identify the running process")
+    active = body.get("active_agents")
+    allowed = (state,) if isinstance(state, str) else state
+    if type(active) is not int or active < 0 or body.get("gateway_state") not in allowed:
+        raise Refused("gateway activity/state is unknown; no stop performed")
+    if idle and active:
+        raise Refused("agent turn active; retry after the client is idle")
+    return body["gateway_state"]
+
+
+def supervisor(*args: str, allow_missing: bool = False) -> str:
+    reply = subprocess.run(["supervisorctl", *args], capture_output=True, text=True, timeout=WAIT + 10)
+    # Supervisor uses exit 7 AND stdout "0" for a known stopped process.
+    stopped_pid = args == ("pid", "hermes-gateway") and reply.returncode == 7 and reply.stdout.strip() == "0"
+    missing = (allow_missing and args == ("pid", "hermes-gateway") and reply.returncode == 1
+               and reply.stdout.strip() == "No such process hermes-gateway")
+    if missing:
+        return "missing"
+    if reply.returncode and not stopped_pid:
+        raise Refused(f"supervisor {' '.join(args)} failed; inspect supervisor locally")
+    return reply.stdout.strip()
+
+
+def wait_for(check, message: str) -> None:
+    deadline = time.monotonic() + WAIT
+    while time.monotonic() < deadline:
+        if check():
+            return
+        time.sleep(0.1)
+    raise Refused(message)
+
+
+def signal_old(old: Process, sig: int) -> None:
+    if process(old.pid) != old:
+        return
+    if old.group <= 1 or old.group == os.getpgrp():
+        raise Refused("unsafe gateway process group; manual investigation required")
+    try:
+        os.killpg(old.group, sig)
+    except ProcessLookupError:
+        pass
+
+
+def stop_old(old: Process) -> None:
+    supervisor("stop", "hermes-gateway")
+    if process(old.pid) != old:
+        return
+    # Recovers an orphan left by the previous flock-as-parent unit.
+    signal_old(old, signal.SIGTERM)
+    try:
+        wait_for(lambda: process(old.pid) != old, "old gateway did not exit after TERM")
+    except Refused:
+        print("gateway did not exit after TERM; using KILL on its verified process group", file=sys.stderr)
+        signal_old(old, signal.SIGKILL)
+        wait_for(lambda: process(old.pid) != old, "old gateway survived KILL; start refused")
+
+
+def restart() -> None:
+    old_pids = gateways()
+    if len(old_pids) > 1:
+        raise Refused("multiple gateways found; activity cannot be verified safely")
+    if not old_pids:
+        if supervisor("pid", "hermes-gateway", allow_missing=True) not in {"0", "missing"}:
+            raise Refused("supervised process has unknown activity; start/reload refused")
+        missing = object()
+        try:
+            body = json.loads((HOME / "gateway_state.json").read_text())
+        except FileNotFoundError:
+            body = missing
+        except (OSError, ValueError):
+            raise Refused("unreadable retained gateway status; start refused") from None
+        if body is not missing:
+            if (not isinstance(body, dict) or type(body.get("pid")) is not int or body["pid"] <= 0
+                    or type(body.get("start_time")) is not int or body["start_time"] <= 0):
+                raise Refused("invalid retained gateway identity; start refused")
+            live = process(body["pid"])
+            if live and live.start == body["start_time"]:
+                raise Refused("live gateway status has an unrecognized command; start refused")
+    marker = HOME / ".drain_request.json"
+    marked = False
+    marker_identity = None
+    def owned_marker():
+        try:
+            current = marker.stat()
+        except FileNotFoundError:
+            raise Refused("drain marker disappeared; lifecycle changed concurrently") from None
+        if (current.st_dev, current.st_ino) != marker_identity:
+            raise Refused("drain marker belongs to another operation; left untouched")
+    def clear_marker():
+        owned_marker()
+        marker.unlink()
+    try:
+        if old_pids:
+            old = old_pids[0]
+            runtime(old, idle=True)
+            # Acknowledged drain closes the idle-check / new-message race. Never
+            # overwrite another operator's marker; suppress the home-channel notice.
+            # An empty/partial marker is drain-active but NOT quiet in Hermes.
+            # Link a fully written file exclusively: atomic visibility + no clobber.
+            with tempfile.NamedTemporaryFile(mode="w", dir=HOME, prefix=".feina-drain-") as stream:
+                json.dump({"action": "drain", "principal": "feina-gateway-restart",
+                           "requested_at": datetime.now(timezone.utc).isoformat(),
+                           "suppress_notification": True}, stream)
+                stream.flush()
+                os.fsync(stream.fileno())
+                os.link(stream.name, marker)
+                identity = os.fstat(stream.fileno())
+                marker_identity = (identity.st_dev, identity.st_ino)
+                marked = True
+            def drained():
+                owned_marker()
+                if gateways() != old_pids:
+                    raise Refused("gateway identity changed during idle check")
+                # One atomic status snapshot avoids a running -> draining
+                # transition between two independent reads.
+                return runtime(old, idle=True, state=("running", "draining")) == "draining"
+            wait_for(drained, "gateway did not acknowledge quiet drain; no stop performed")
+            owned_marker()
+            stop_old(old)
+        if gateways():
+            raise Refused("old gateway remains; start refused")
+        if marked:
+            clear_marker()
+            marked = False
+        # Bootstrap may have hardened the unit on disk. Reload only AFTER the
+        # verified stop; update can autostart a changed/new program.
+        supervisor("reread")
+        supervisor("update", "hermes-gateway")
+        if supervisor("pid", "hermes-gateway") == "0":
+            supervisor("start", "hermes-gateway")
+        def ready():
+            current = gateways()
+            if len(current) > 1:
+                raise Refused("duplicate gateways after start; manual investigation required")
+            if not current:
+                return False
+            new = current[0]
+            if new in old_pids:
+                raise Refused("gateway PID did not change")
+            if supervisor("pid", "hermes-gateway") != str(new.pid):
+                return False
+            try:
+                runtime(new, idle=False)
+            except Refused:
+                return False
+            return True
+        wait_for(ready, "new gateway did not become the sole supervised running process")
+        print(f"gateway restarted: {old_pids[0].pid if old_pids else 'stopped'} -> {gateways()[0].pid}")
+    finally:
+        if marked:
+            clear_marker()
+
+
+def main() -> int:
+    if sys.argv[1:]:
+        print("usage: feina-gateway-restart (operator only; requires approved live step)", file=sys.stderr)
+        return 2
+    try:
+        STATE.mkdir(parents=True, exist_ok=True)
+        with (STATE / "hermes-gateway-restart.lock").open("a") as lock:
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise Refused("another gateway restart is in progress") from None
+            restart()
+    except (Refused, OSError, ValueError, subprocess.SubprocessError) as exc:
+        # Do not print file contents, subprocess output, or credential-bearing config.
+        print(f"gateway restart refused: {exc if isinstance(exc, Refused) else type(exc).__name__}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — FEI-42
+
+Gateway restarts now use a guarded operator helper: direct Hermes supervision,
+nonblocking lock, quiet idle/drain check, TERM-first orphan recovery and a verified
+single replacement PID. Bootstrap hardens supervisor process-group shutdown.
+Repo-only; no client rollout or approved reconciliation script change.
+
 ## Template v1.1.1
 
 Membr download follows the flow checked on one supervised run on 26 Oct 2026.
