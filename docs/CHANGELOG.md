@@ -1,5 +1,21 @@
 # Changelog
 
+## Template v1.1.1
+
+Membr download follows the flow checked on one supervised run on 26 Oct 2026.
+
+The club admin sidebar `Informes` opens a submenu. Its child `Informes` opens Membr Insights in a new tab on `insights.eu.membr.com`. The script allow-lists that host plus the club host, opens its own tab, follows the new Insights tab, and closes only the tabs it opened. A tab that was already open, such as Harlands, is left alone. `--inspect` waits for the page and for network idle, then records visible menu texts, inputs, and buttons.
+
+The report path is My Reports, Transaction Reports, POS Transactions. Dates are plain `YYYY-MM-DD` fills of `input[name='from']` and `input[name='until']`. `Select Gyms` starts with two gyms selected. The config names `Anytime Fitness Sant Adrià`. The script leaves only that gym selected and reads the screen back before Run Report. If it cannot confirm that, the status is `GYM_FILTER_UNVERIFIED`.
+
+Run Report shows `<b>N</b> total rows` and no money total. Download Report opens a menu; the script clicks Download Report (.xlsx) and stores Membr's bytes as `runs/<date>/pos-export.xlsx` with a sha256. `N` is stored on the manifest. A different data-row count on sheet `Report` is `SCREEN_MISMATCH`. Zero rows on screen and in the file is `EMPTY_DAY_NEEDS_CONFIRMATION`. `Oops, an error has occurred` beside zero rows is a failed run.
+
+The manifest field `date_filter_timezone` is `unverified`. The export's download-time metadata is UTC. Which clock the From/Until filter uses is still a TODO.
+
+Membr keeps the login in page storage. The session check is the dashboard versus the login form or a captcha. The guessed cookie-name list is gone. A supervised run saw `__stripe_*`, `_hj*`, and `AWSALB*` only.
+
+The Insights workbook uses sheets `Report` and `Report Meta Data` and report name `POS Transaction`. The vendored `afsa_checks.py` still requires `Informe`, `Informe Meta Data`, and `Transaccion Punto de Venta`. That approved file is unchanged. A download status of OK does not mean `afsa_checks.py export` will pass.
+
 ## Template v1.1.0
 
 AFSA reliability for the client-agent template. Nothing in this version registers cron jobs or contacts a live client computer. Each part stays off until its enable flag exists.

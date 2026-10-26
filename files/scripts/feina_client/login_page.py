@@ -93,6 +93,34 @@ class _StructureParser(HTMLParser):
         self._buf = []
 
 
+def annotate_structure(page: dict) -> dict:
+    """Group visible controls for --inspect. Password values are never copied."""
+    elements = page.get("elements") or []
+    menus: list[str] = []
+    inputs: list[dict] = []
+    buttons: list[str] = []
+    for el in elements:
+        tag = el.get("tag") or ""
+        text = el.get("text") or ""
+        if tag == "a" or el.get("role") in {"menuitem", "menu"}:
+            if text:
+                menus.append(text)
+        if tag in {"input", "select", "textarea"}:
+            inputs.append(
+                {
+                    "name": el.get("name") or "",
+                    "type": el.get("type") or "",
+                    "placeholder": el.get("placeholder") or "",
+                }
+            )
+        if tag == "button" and text:
+            buttons.append(text)
+    page["menus"] = menus
+    page["inputs"] = inputs
+    page["buttons"] = buttons
+    return page
+
+
 def structure_from_html(url: str, html: str) -> dict:
     parser = _StructureParser()
     try:
@@ -105,9 +133,11 @@ def structure_from_html(url: str, html: str) -> dict:
     match = re.search(r"<title[^>]*>(.*?)</title>", html or "", re.IGNORECASE | re.DOTALL)
     if match:
         title = " ".join(match.group(1).split())[:160]
-    return {
-        "url": url,
-        "title": title,
-        "login_wall": detect_login_wall(url, html),
-        "elements": parser.items,
-    }
+    return annotate_structure(
+        {
+            "url": url,
+            "title": title,
+            "login_wall": detect_login_wall(url, html),
+            "elements": parser.items,
+        }
+    )

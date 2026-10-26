@@ -103,7 +103,12 @@ def run_nightly(
             save_night(payload)
             return payload
         if manifest.get("status") != "OK":
-            payload = _empty_status(night, business, "FAILED", reason="download_failed")
+            payload = _empty_status(
+                night,
+                business,
+                "FAILED",
+                reason=manifest.get("status") or "download_failed",
+            )
             payload["duration_sec"] = round(time.monotonic() - started, 3)
             save_night(payload)
             return payload

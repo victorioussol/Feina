@@ -156,6 +156,17 @@ def test_watcher_restores_fingerprint_when_the_lock_is_busy(client, monkeypatch)
     assert "rerun_night" not in state
 
 
+def test_download_halt_is_not_a_successful_night(client, monkeypatch):
+    def fake_download(cfg, **kwargs):
+        return {"status": "SCREEN_MISMATCH", "files": [], "reason": "SCREEN_MISMATCH"}
+
+    monkeypatch.setattr("feina_client.jobs.run_download", fake_download)
+    result = run_nightly({"pos_report_id": "pos_transactions"}, now=at(4, 5), session=object())
+    assert result["status"] == "FAILED"
+    assert result["reason"] == "SCREEN_MISMATCH"
+    assert result["confirmed_write"] is False
+
+
 def test_second_request_is_queued_while_a_long_job_or_the_night_lock_is_held(client):
     assert start_long_job("chat", "ingresos", lock_busy=False, now=at(11, 0)) == "start"
     assert start_long_job("chat", "another report", lock_busy=False, now=at(11, 1)) == "queued"

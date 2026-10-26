@@ -1,11 +1,14 @@
 """Will the saved Membr session still be valid at 04:00, and should we re-run?
 
-Token expiry is used when the browser exposes it. Otherwise we use the
-observed 24 hour lifetime, and only from a real logged-out to logged-in
-change — a successful page load does not slide that clock forward.
+The session signal is the page: the dashboard loads, or the login form or a
+captcha is showing. Membr keeps that login in page storage. Cookie names are
+not a login signal. A successful page load does not slide the 24 hour clock
+forward; that clock starts only when a login wall has just cleared.
 
-The watcher reads local Chrome cookie metadata (name, host, creation, expiry).
-It does not read cookie values and it does not poll Membr to keep a session warm.
+The watcher reads local Chrome cookie metadata (name, host, creation, expiry)
+to notice a file change after a wall. It does not read cookie values, it does
+not treat a cookie name as proof of a Membr session, and it does not poll
+Membr to keep a session warm.
 """
 
 from __future__ import annotations
@@ -18,15 +21,6 @@ from pathlib import Path
 from .runtime import MADRID, madrid_now
 
 CHROME_EPOCH = datetime(1601, 1, 1, tzinfo=timezone.utc)
-
-# Names are guesses until a supervised inspect run records the real cookie.
-GUESSED_COOKIE_NAMES = (
-    "PHPSESSID",
-    "membr_session",
-    "MEMBRSESSID",
-    "remember_me",
-    "access_token",
-)
 
 
 def chrome_expiry_to_datetime(microseconds: int | None) -> datetime | None:
@@ -142,11 +136,15 @@ def cookie_fingerprint(rows: list[dict]) -> str:
 
 
 def earliest_expiry(rows: list[dict], names: tuple[str, ...] | None = None) -> datetime | None:
-    """Earliest real expiry among Membr cookies whose names we were given.
+    """Earliest real expiry among an explicit set of cookie names.
 
-    Session cookies (no expiry) are ignored. Names default to the guessed list.
+    An empty or missing name list returns None. Cookie names are not a Membr
+    login signal, so there is no default list. Session cookies (no expiry)
+    are ignored.
     """
-    wanted = set(names or GUESSED_COOKIE_NAMES)
+    if not names:
+        return None
+    wanted = set(names)
     found: list[datetime] = []
     for row in rows:
         if row.get("name") not in wanted:

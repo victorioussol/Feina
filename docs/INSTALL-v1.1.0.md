@@ -1,5 +1,7 @@
 # Installing template v1.1.0 parts
 
+Template v1.1.1 corrects the Membr download after a supervised run on 26 Oct 2026. The steps in "Supervised first run" below are the v1.1.1 flow. v1.1.0's guessed Reports / Membr Report labels, guessed date selectors, and guessed session-cookie names are retired.
+
 This does not deploy anything. Run it on a client computer only after that step has been approved by hand. The commands below copy files and write an enable flag. They do not register cron, and they do not open Membr.
 
 Set the computer timezone first:
@@ -60,7 +62,7 @@ Do this once, with a person watching the browser. Membr must already be logged i
 
 1. Enable `membr-download` as above.
 2. Point `browser.user_data_dir` in `membr.reports.yaml` at the same directory as `browser.user_data_dir` in `~/.hermes/config.yaml`. The profile must already exist. The script will not create an empty one.
-3. Replace `REPLACE_CLUB` in `club_base_url` with the club's real host (`https://<club>.membr.com` and nothing after the host).
+3. Replace `REPLACE_CLUB` in `club_base_url` with the club's real host (`https://<club>.membr.com` and nothing after the host). Leave `allowed_hosts` as `insights.eu.membr.com`. Add no other host. Set `gym_name` to the exact on-screen gym, `Anytime Fitness Sant Adrià` for this club.
 4. If Chrome is not already listening, start it yourself on the existing profile:
 
    ```bash
@@ -83,7 +85,7 @@ Do this once, with a person watching the browser. Membr must already be logged i
    python3 /root/.hermes/scripts/membr_download.py --inspect --date yesterday
    ```
 
-   Open `manifest.json`. Every step marked `guess: true` in `references/selectors.md` is unverified. Fix the labels and CSS in `membr.reports.yaml` from the recorded elements. Do not add URLs.
+   Open `manifest.json`. The script waits for the page, then records menus, inputs, and buttons. It opens its own tab, follows the Insights tab, and does not navigate or close a tab that was already open. `date_filter_timezone` is `unverified`: the export download-time metadata is UTC, and which clock From/Until uses is still open. Do not add a host that is not the club or `insights.eu.membr.com`.
 
 7. One real download, still watched:
 
@@ -91,9 +93,9 @@ Do this once, with a person watching the browser. Membr must already be logged i
    python3 /root/.hermes/scripts/membr_download.py --date yesterday
    ```
 
-   Check the xlsx opens and the SHA-256 in the manifest matches `sha256sum` of the file.
+   The file is `runs/<date>/pos-export.xlsx`. The SHA-256 in the manifest matches `sha256sum` of that file. The bytes are Membr's. Status `OK` means the on-screen `<b>N</b> total rows` equals the data rows on sheet `Report`, and the screen shows only `Anytime Fitness Sant Adrià`. `GYM_FILTER_UNVERIFIED`, `SCREEN_MISMATCH`, and `EMPTY_DAY_NEEDS_CONFIRMATION` stop the run. An empty day is not a success. There is no on-screen money total.
 
-8. From the inspect manifest, copy the real on-screen row-count and total selectors into the `read_screen` step. The download stores that text and saves the file as `runs/<date>/pos-export.xlsx`. It does not rebuild the workbook. `afsa_checks.py export` is the check: sheets `Informe` and `Informe Meta Data`, report name `Transaccion Punto de Venta`, a period that covers the whole business date, and a download time after that day ended. The on-screen text is not compared with the one-day total, because a real export may cover more than that day.
+8. `afsa_checks.py export` is still the Spanish check and is not modified in v1.1.1. It requires sheets `Informe` and `Informe Meta Data` and report name `Transaccion Punto de Venta`. The Insights file from this flow has sheets `Report` and `Report Meta Data` and report name `POS Transaction`. A download status of `OK` does not mean `export` will pass. Leave the approved script as it is until that checker is updated on its own.
 
 9. The installer copies the approved skill to `skills/membr-card-reconciliation/` and writes `feina-client/skill-hashes.json`. The scripts `afsa_checks.py` and `update_workbook.py` are already in the template under `skills/client-drop/afsa-ingresos/approved/`, with sha256 in `hashes.json`. Do not edit them. A hash mismatch is `CHECKS_UNAVAILABLE`. The 06:15 eval alerts Slack (`skill_hash_drift`) if the installed skill files change. It does not rewrite them.
 
