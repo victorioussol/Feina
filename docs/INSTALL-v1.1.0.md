@@ -40,8 +40,51 @@ Do not put `ORGO_API_KEY` on the client. The installer refuses to copy a file th
 Restart the gateway after the copy:
 
 ```bash
-supervisorctl restart hermes-gateway
+feina-gateway-restart
 ```
+
+The helper is operator-only. For a live client, first record Victor's yes on
+its enable ticket, make SHA-256 backups of the wrapper, helper and supervisor
+unit, and confirm the client has been idle for at least two minutes. This repo
+change grants no live approval. Never invoke it from an agent turn.
+
+`feina-gateway-restart` refuses active turns, unknown/mismatched activity state,
+multiple gateways, another restart, or an existing drain request. It checks
+`~/.hermes/gateway_state.json` (PID, Linux start time and `active_agents`), requests
+a quiet drain, waits for the same gateway to acknowledge `draining` with zero
+active agents, then stops the supervised program. The drain prevents a new turn
+from starting between the idle check and stop. Missing status or drain support
+fails closed; do not bypass it with a direct supervisor restart.
+
+The wrapper holds a nonblocking inherited lock and execs Hermes, so TERM reaches
+Hermes directly. Bootstrap adds `stopsignal=TERM`, `stopwaitsecs=30`,
+`stopasgroup=true`, and `killasgroup=true` while preserving other unit settings.
+The helper reloads the unit only after the old process is gone, then requires
+exactly one new gateway PID matching supervisord and running status. For an old
+flock-parent orphan it sends TERM to that verified process group, waits 30
+seconds, and uses KILL only if it still survives. It never uses a blanket pkill.
+All failures propagate to callers. A failed start requires operator investigation;
+no retry loop or client message is sent.
+
+The status and drain contracts were checked against Hermes commit
+`71d34bad1045610252eda02ee79549436896e784`, `gateway/status.py` and
+`gateway/drain_control.py`. A later live rollout must verify that Vince's running
+installation exposes these contracts before changing files. Bootstrap/resume
+defer the restart until OAuth `auth.json` exists, matching the wrapper's existing
+startup prerequisite.
+
+FEI-46 must provide a tested rollback using those backups before rollout.
+Restoring the old flock-parent wrapper also restores its supervision bug; do not
+claim it passes this helper's supervised-PID check. If activity cannot be proved,
+stop and investigate instead of killing processes. Rollout and rollback remain
+separate approved live steps.
+
+For local verification, run `.venv/bin/python -m pytest -q`. On macOS the
+Linux process cases skip; run `scripts/test-gateway-linux.sh` to run the full
+suite in a disposable local Linux container with fake Hermes and real
+supervisord/flock/pgrep. The tests prove graceful TERM, changed single PID,
+lock exclusion, busy/unknown/racing-turn refusal, legacy-orphan recovery,
+TERM-before-KILL, duplicate refusal, and failed-start reporting.
 
 ## Client file
 

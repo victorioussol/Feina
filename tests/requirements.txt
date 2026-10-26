@@ -1,3 +1,6 @@
 pytest
 openpyxl
 pypdf
+supervisor
+PyYAML
+./files/local-packages/latitude-telemetry-hermes

@@ -2,7 +2,7 @@
 # ==========================================================================
 # feina-stack — Hermes gateway wrapper (supervised, reboot-safe)
 # ==========================================================================
-set +e
+set -e
 export HOME=/root
 export HERMES_HOME=/root/.hermes
 export PATH=/usr/local/bin:/root/.local/bin:/root/.hermes/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH
@@ -20,6 +20,8 @@ set -a
 set +a
 
 mkdir -p /var/lib/orgo
+# Inherit the lock in Hermes itself: supervisord must signal Hermes, not flock.
+exec 9>/var/lib/orgo/hermes-gateway.lock
+flock -n 9 || { echo "gateway already running" >&2; exit 1; }
 python3 /usr/local/bin/feina-honcho-sync.py 2>/dev/null || true
-
-exec flock /var/lib/orgo/hermes-gateway.lock hermes gateway run --replace --accept-hooks
+exec hermes gateway run --replace --accept-hooks

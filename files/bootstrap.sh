@@ -161,13 +161,28 @@ autorestart=true
 stdout_logfile=/var/log/orgo/hermes-gateway.log
 stderr_logfile=/var/log/orgo/hermes-gateway.err
 SUP
-  supervisorctl reread 2>/dev/null || true
-  supervisorctl update 2>/dev/null || true
+fi
+
+# Preserve provider-specific settings, adding only shutdown controls. The helper
+# reloads this file after a guarded stop, never while a turn is running.
+if [ -f /etc/supervisor/conf.d/hermes-gateway.conf ]; then
+  python3 - <<'PYUNIT'
+import configparser
+from pathlib import Path
+path = Path('/etc/supervisor/conf.d/hermes-gateway.conf')
+cfg = configparser.RawConfigParser()
+cfg.read(path)
+section = cfg['program:hermes-gateway']
+section.update(stopsignal='TERM', stopwaitsecs='30', stopasgroup='true', killasgroup='true')
+with path.open('w') as stream:
+    cfg.write(stream)
+PYUNIT
 fi
 
 # 9) Install helper binaries from stage if present
 for pair in \
   "gateway-run.sh:/usr/local/bin/hermes-gateway-run.sh" \
+  "feina-gateway-restart:/usr/local/bin/feina-gateway-restart" \
   "agentphone-bridge-run.sh:/usr/local/bin/feina-stack-agentphone-bridge-run.sh" \
   "feina-onboard.sh:/usr/local/bin/feina-onboard.sh" \
   "feina-enable.py:/usr/local/bin/feina-enable.py" \
@@ -184,6 +199,7 @@ for pair in \
   done
 done
 
-supervisorctl restart hermes-gateway 2>/dev/null || true
+# Before OAuth setup the wrapper intentionally waits for auth.json.
+if [ -s "$HERMES_HOME/auth.json" ]; then feina-gateway-restart; fi
 
 echo "feina-stack install complete"

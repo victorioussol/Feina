@@ -15,6 +15,8 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
+import pytest
+
 from openpyxl import Workbook, load_workbook
 
 from feina_client.reconcile import review_day
@@ -49,7 +51,8 @@ def _source_workbook(path: Path) -> None:
     book.save(path)
 
 
-def test_golden_row_294_uses_the_payload_because_the_membr_export_is_missing(client):
+@pytest.mark.parametrize("comment", [None, "KEEP-H294"])
+def test_golden_row_294_uses_the_payload_because_the_membr_export_is_missing(client, comment):
     """`export` is not replayed. dates and update_workbook.py are the real scripts."""
     folder = GOLDEN / "inputs"
     payload = folder / "daily-payload.json"
@@ -60,6 +63,9 @@ def test_golden_row_294_uses_the_payload_because_the_membr_export_is_missing(cli
     evidence = [folder / "processor-evidence.json"]
     book = client / "AFSA-Ingresos.xlsx"
     _source_workbook(book)
+    original = load_workbook(book)
+    original["2026"]["H294"] = comment
+    original.save(book)
     before = sha256_file(book)
     reviewed = review_day(
         business_date=DAY,
@@ -97,7 +103,7 @@ def test_golden_row_294_uses_the_payload_because_the_membr_export_is_missing(cli
     assert sheet["C294"].number_format == SCRIPT_CF
     assert sheet["C294"].number_format != LIVE_CF
     assert bool(sheet.column_dimensions["H"].hidden) is False
-    assert sheet["H294"].value == "KEEP-H294"
+    assert sheet["H294"].value == comment
     assert sheet["H293"].value == "KEEP-H293"
     assert sheet["A4"].value == "KEEP-A4"
     assert sheet["C4"].value == 1
