@@ -1,7 +1,11 @@
 """Row 294 of 20 Oct 2026, through the real approved scripts.
 
 The Membr POS export for that day is not in the fixture. C and E come from
-daily-payload.json. `afsa_checks.py export` is not covered here.
+daily-payload.json. `afsa_checks.py export` is not covered by the row-294 test.
+
+`dates` compares transaction dates with the business date and rejects a PDF
+already stored under another verified date. It does not read today's date.
+The ledger path is redirected to the temp dir from conftest.
 """
 
 from __future__ import annotations
@@ -162,6 +166,46 @@ def test_export_is_covered_when_a_membr_file_is_actually_supplied(client, tmp_pa
     assert reviewed["staged"] is True
     assert reviewed["figures_final"] is False
     assert reviewed["screen"]["count_text"] == "9"
+
+
+def test_dates_rejects_a_pdf_already_used_for_another_verified_date(afsa_state):
+    """The reuse rule reads the isolated ledger, not the wall clock."""
+    folder = GOLDEN / "inputs"
+    pdf = folder / "6874_347360075_99871480206_20102026.pdf"
+    evidence = folder / "processor-evidence.json"
+    other = afsa_state / "runs" / "2026-10-19"
+    other.mkdir(parents=True)
+    (other / pdf.name).write_bytes(pdf.read_bytes())
+    (afsa_state / "verified-dates.json").write_text(
+        json.dumps({"start": "2026-10-01", "verified": {"2026-10-19": {"md5": "recorded"}}}),
+        encoding="utf-8",
+    )
+    from feina_client.approved import find_approved, run_dates
+
+    found = find_approved()
+    assert found and found["ok"]
+    reused = run_dates(
+        found["checks"],
+        business_date="2026-10-20",
+        pdfs=[pdf],
+        evidence=[evidence],
+        slack_on_fail=False,
+    )
+    assert reused["result"] == "FAIL"
+    assert any("byte-identical" in item and "2026-10-19" in item for item in reused["problems"])
+    assert not Path("/root/.hermes/automation/af-ingresos/verified-dates.json").exists()
+
+    (afsa_state / "verified-dates.json").unlink()
+    (other / pdf.name).unlink()
+    clean = run_dates(
+        found["checks"],
+        business_date="2026-10-20",
+        pdfs=[pdf, folder / "resumen_347360075_T0000001_202610210123.pdf"],
+        evidence=[evidence],
+        slack_on_fail=False,
+    )
+    assert clean["result"] == "PASS", clean.get("problems")
+    assert clean["problems"] == []
 
 
 def test_future_membr_export_slot_is_empty_until_a_file_is_supplied():

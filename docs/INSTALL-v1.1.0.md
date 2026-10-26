@@ -117,7 +117,7 @@ Do this once, with a person watching the browser. Membr must already be logged i
 
 11. Only then review `CRON-COMMANDS.sh` and register the jobs you enabled. The 06:00 workbook eval passes only when `final` has passed.
 
-12. The golden day is 20 Oct 2026, sheet `2026`, row 294. Its Membr export is not in the fixture, so that test uses `daily-payload.json` and says `export` is not covered. A later export can be dropped in `tests/fixtures/golden/pending-membr-export/`.
+12. The golden day is 20 Oct 2026, sheet `2026`, row 294. Its Membr export is not in the fixture, so that test uses `daily-payload.json` and says `export` is not covered. A later export can be dropped in `tests/fixtures/golden/pending-membr-export/`. `afsa_checks.py dates` needs `pypdf` (see `tests/requirements.txt`). Without that package the PDFs fail as `unreadable (ModuleNotFoundError)`. The check matches transaction dates to the business date, and it rejects a PDF whose bytes already sit under a different date in `/root/.hermes/automation/af-ingresos/runs` when that date is in `verified-dates.json`. It does not read the wall clock. The tests point that directory at a temp folder. `datetime.now` cannot be patched from outside the approved file.
 
 ## What stays manual
 

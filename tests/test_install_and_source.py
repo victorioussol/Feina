@@ -110,6 +110,8 @@ def test_client_scripts_do_not_log_in_or_call_hidden_membr_apis():
     assert "Informe Meta Data" in text
     assert "Transaccion Punto de Venta" in text
     assert "Report Meta Data" not in text
+    assert "Anytime Fitness Sant Adria" in text
+    assert "Sant Adrià" not in text
 
 
 def test_cron_lines_match_jobs_that_need_arguments():
