@@ -20,13 +20,18 @@ When the client asks for the same work in chat, stay under 15 model calls:
 3. `afsa_reconcile.py --date yesterday --membr <manifest path>` once. Add `--paycomet` and `--harlands` when those inbox files exist (`inbox/paycomet-YYYY-MM-DD.xlsx`, `inbox/harlands-YYYY-MM-DD.xlsx`).
 4. Read the one-line JSON. Do not open the spreadsheets in the chat. Do not click Membr.
 
-Checks the reconcile script already runs:
+The reconcile script does not invent figures and does not apply a tolerance. It stops the day, with no final number, when:
 
-- Card and refund rows against Paycomet. Amounts within 5 EUR can pair. A larger gap, or an unpaired row, is a mismatch.
-- Direct debits against Harlands. A failed collection is listed even when the amount matches.
-- Missing Paycomet or Harlands files are mismatches only when that source is `required: true` in the Membr config. Both ship optional until the inbox files are real.
+- a header is unrecognized or a required column is missing (`SOURCE_FORMAT_CHANGED`)
+- a date, amount, or receipt cannot be parsed (`PARSE_FAILED`, with a count)
+- the file is empty, has no rows for the day, or covers any day other than the target (`NEEDS_CONFIRMATION`)
+- Membr's on-screen row count or total does not exactly equal the file (`SCREEN_MISMATCH`)
+- only Membr is present (`Membr only, not cross-checked`)
+- a receipt is duplicated or a row's method matches none of the known words (listed, not dropped, not written)
 
-The workbook is `workbooks/AFSA-Ingresos.xlsx` with sheets Resumen, Descuadres and Control. Success means the Resumen row for the business date (yesterday in Madrid) reads back with the same totals.
+When those gates pass, it runs the approved `afsa_checks.py export` and `update_workbook.py` if they are installed. They are not in this template. A missing script is `CHECKS_UNAVAILABLE`. The workbook is Vince's existing `AFSA Ingresos` file. The write backs it up, replaces only the target day's row, reads that row back cell by cell, and restores the backup if any other row changes or column H is hidden.
+
+Tell the client one of three things: verified and matching; verified but the platforms disagree (what each system shows, and what to look up); or not verified, with no figure given as final. Never adjust a platform amount.
 
 Drive upload is not inside the no-agent job: Composio is a model tool on v0.21.7. After a confirmed local write, if the client config has a Drive file id, upload that exact file and save the metadata JSON. Then `afsa_reconcile.py --verify-drive <json> --workbook <path>`. If that check fails, the run is failed. Do not tell the client the Drive copy is updated until the read-back says so.
 

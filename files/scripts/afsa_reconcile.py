@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from feina_client.cliutil import enabled, resolve_business_date  # noqa: E402
 from feina_client.jobs import save_night  # noqa: E402
-from feina_client.reconcile import lines_from_xlsx, reconcile_lines, verify_drive_readback, write_workbook  # noqa: E402
+from feina_client.reconcile import review_day, verify_drive_readback  # noqa: E402
 from feina_client.runtime import client_root, madrid_now, sha256_file  # noqa: E402
 
 
@@ -47,33 +47,49 @@ def main(argv: list[str] | None = None) -> int:
     membr = Path(args.membr)
     pay = Path(args.paycomet) if args.paycomet else None
     har = Path(args.harlands) if args.harlands else None
-    result = reconcile_lines(
-        lines_from_xlsx(membr, "membr"),
-        lines_from_xlsx(pay, "paycomet") if pay and pay.is_file() else None,
-        lines_from_xlsx(har, "harlands") if har and har.is_file() else None,
-        business_date=date.fromisoformat(business),
-    )
     book = Path(args.workbook) if args.workbook else client_root() / "workbooks" / "AFSA-Ingresos.xlsx"
-    hashes = {"membr_pos": sha256_file(membr)}
-    written = write_workbook(book, night=night, result=result, source_hashes=hashes)
-    status = "CONFIRMED" if written["confirmed_write"] else "FAILED"
+    screen_count, screen_total = _screen_from_manifest(membr)
+    reviewed = review_day(
+        business_date=date.fromisoformat(business),
+        membr=membr,
+        paycomet=pay if pay and pay.is_file() else None,
+        harlands=har if har and har.is_file() else None,
+        workbook=book if book.is_file() else None,
+        screen_count_text=screen_count,
+        screen_total_text=screen_total,
+    )
     payload = {
         "night": night,
-        "business_date": business,
-        "status": status,
-        "confirmed_write": written["confirmed_write"],
-        "workbook": written["path"],
-        "workbook_sha256": written["workbook_sha256"],
-        "readback": written["readback"],
-        "mismatches": result.public_mismatches(),
-        "failed_debits": [item.as_dict() for item in result.failed_debits],
         "model_calls": 0,
         "drive": "NOT_RUN",
-        "sources": hashes,
     }
+    payload.update(reviewed)
     save_night(payload)
-    sys.stdout.write(json.dumps({"status": status, "confirmed_write": written["confirmed_write"]}) + "\n")
-    return 0 if written["confirmed_write"] else 2
+    public = {
+        "status": payload.get("status"),
+        "outcome": payload.get("outcome"),
+        "confirmed_write": payload.get("confirmed_write"),
+        "figures_final": payload.get("figures_final"),
+        "reason": payload.get("reason"),
+        "phrase": payload.get("phrase"),
+    }
+    sys.stdout.write(json.dumps(public) + "\n")
+    return 0 if payload.get("confirmed_write") else 2
+
+
+def _screen_from_manifest(membr: Path) -> tuple[str | None, str | None]:
+    manifest = membr.parent / "manifest.json"
+    if not manifest.is_file():
+        return None, None
+    try:
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None, None
+    for item in data.get("files") or []:
+        if Path(str(item.get("path") or "")).name == membr.name:
+            return item.get("screen_count_text"), item.get("screen_total_text")
+    screen = data.get("screen") or {}
+    return screen.get("count_text"), screen.get("total_text")
 
 
 if __name__ == "__main__":

@@ -114,15 +114,8 @@ def test_playwright_expiry_is_not_read_as_chrome_microseconds():
 def test_workbook_step_and_session_evals(tmp_path):
     now = at(2026, 10, 26, 6, 0)
     book = tmp_path / "AFSA-Ingresos.xlsx"
-    write_xlsx(
-        book,
-        {
-            "Resumen": [
-                ["night", "business_date", "membr_total", "paycomet_total", "harlands_total", "mismatch_count", "confirmed"],
-                ["2026-10-26", "2026-10-25", "10.00", "10.00", "0.00", "0", "yes"],
-            ]
-        },
-    )
+    cells = ["2026-10-25", "10.00", "10.00", "0.00", "0", "ok", "note", "H"]
+    write_xlsx(book, {"AFSA": [["day", "a", "b", "c", "d", "e", "f", "H"], cells]})
     stamp = at(2026, 10, 26, 5, 30).timestamp()
     import os
 
@@ -132,6 +125,9 @@ def test_workbook_step_and_session_evals(tmp_path):
         "business_date": "2026-10-25",
         "status": "CONFIRMED",
         "confirmed_write": True,
+        "outcome": "verified_match",
+        "figures_final": True,
+        "readback": {"row_number": 2, "cells": cells},
     }
     assert workbook_eval(status, book, now) == (True, "ok")
     status["confirmed_write"] = False

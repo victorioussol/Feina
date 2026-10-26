@@ -43,6 +43,23 @@ class PlaywrightSession:
         assert_safe_fill(selector, value)
         self._page.fill(selector, value, timeout=10_000)
 
+    def read_screen(self, count_selectors: list[str], total_selectors: list[str]) -> dict:
+        """Read Membr's own on-screen count and total. The text is not edited."""
+        return {
+            "count_text": self._locator_text(count_selectors),
+            "total_text": self._locator_text(total_selectors),
+        }
+
+    def _locator_text(self, selectors: list[str]) -> str | None:
+        for selector in selectors:
+            if assert_safe_selector(selector) is False:
+                continue
+            locator = self._page.locator(selector)
+            if locator.count() == 0:
+                continue
+            return locator.first.inner_text(timeout=10_000)
+        return None
+
     def download(self, selectors: list[str], dest: Path) -> None:
         dest.parent.mkdir(parents=True, exist_ok=True)
         last = "download control not found"

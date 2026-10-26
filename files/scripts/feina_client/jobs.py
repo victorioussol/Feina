@@ -11,14 +11,13 @@ from datetime import date, datetime
 from pathlib import Path
 
 from .download import NoProfile, run_download
-from .reconcile import lines_from_xlsx, reconcile_lines, write_workbook
+from .reconcile import review_day
 from .runtime import (
     business_date_for_night,
     client_root,
     madrid_now,
     night_id,
     read_json,
-    sha256_file,
     write_json,
 )
 from .session import parse_observed, watcher_decision
@@ -108,50 +107,28 @@ def run_nightly(
             payload["duration_sec"] = round(time.monotonic() - started, 3)
             save_night(payload)
             return payload
-        files = {item["report"]: Path(item["path"]) for item in manifest.get("files") or []}
-        membr_path = files.get(cfg.get("pos_report_id") or "pos_transactions")
-        if membr_path is None or not membr_path.is_file():
-            payload = _empty_status(night, business, "FAILED", reason="membr_file_missing")
-            payload["duration_sec"] = round(time.monotonic() - started, 3)
-            save_night(payload)
-            return payload
+        files = {item["report"]: item for item in manifest.get("files") or []}
+        membr_item = files.get(cfg.get("pos_report_id") or "pos_transactions") or {}
+        membr_path = Path(membr_item["path"]) if membr_item.get("path") else None
         inbox_dir = inbox or (client_root() / "inbox")
         paycomet_path = inbox_dir / f"paycomet-{business}.xlsx"
         harlands_path = inbox_dir / f"harlands-{business}.xlsx"
-        pay_required = bool((cfg.get("sources") or {}).get("paycomet", {}).get("required", False))
-        har_required = bool((cfg.get("sources") or {}).get("harlands", {}).get("required", False))
-        business_day = date.fromisoformat(business)
-        result = reconcile_lines(
-            lines_from_xlsx(membr_path, "membr"),
-            lines_from_xlsx(paycomet_path, "paycomet") if paycomet_path.is_file() else None,
-            lines_from_xlsx(harlands_path, "harlands") if harlands_path.is_file() else None,
-            business_date=business_day,
-            paycomet_required=pay_required,
-            harlands_required=har_required,
-        )
         book = workbook or (client_root() / "workbooks" / "AFSA-Ingresos.xlsx")
-        hashes = {"membr_pos": sha256_file(membr_path)}
-        if paycomet_path.is_file():
-            hashes["paycomet"] = sha256_file(paycomet_path)
-        if harlands_path.is_file():
-            hashes["harlands"] = sha256_file(harlands_path)
-        written = write_workbook(book, night=night, result=result, source_hashes=hashes)
-        status = "CONFIRMED" if written["confirmed_write"] else "FAILED"
-        payload = _empty_status(night, business, status)
-        payload.update(
-            {
-                "confirmed_write": bool(written["confirmed_write"]),
-                "workbook": written["path"],
-                "workbook_sha256": written["workbook_sha256"],
-                "readback": written["readback"],
-                "mismatches": result.public_mismatches(),
-                "failed_debits": [item.as_dict() for item in result.failed_debits],
-                "sources": hashes,
-                "model_calls": 0,
-                "duration_sec": round(time.monotonic() - started, 3),
-                "drive": "NOT_RUN",
-            }
+        reviewed = review_day(
+            business_date=date.fromisoformat(business),
+            membr=membr_path,
+            paycomet=paycomet_path if paycomet_path.is_file() else None,
+            harlands=harlands_path if harlands_path.is_file() else None,
+            workbook=book if book.is_file() else None,
+            screen_count_text=membr_item.get("screen_count_text"),
+            screen_total_text=membr_item.get("screen_total_text"),
         )
+        payload = _empty_status(night, business, reviewed.get("status") or "FAILED", reason=reviewed.get("reason"))
+        payload.update(reviewed)
+        payload["model_calls"] = 0
+        payload["duration_sec"] = round(time.monotonic() - started, 3)
+        payload["drive"] = "NOT_RUN"
+        payload["mismatches"] = reviewed.get("items") or []
         save_night(payload)
         return payload
     finally:

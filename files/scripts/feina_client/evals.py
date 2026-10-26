@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-from .reconcile import verify_workbook
 from .runtime import business_date_for_night, madrid_now
+from .workbook_guard import column_h_hidden, read_row_cells, sheet_xml
 
 
 def workbook_eval(status: dict | None, workbook: Path | None, now: datetime) -> tuple[bool, str]:
@@ -17,6 +17,8 @@ def workbook_eval(status: dict | None, workbook: Path | None, now: datetime) -> 
         return False, "workbook_missing"
     if status.get("status") != "CONFIRMED":
         return False, "not_confirmed"
+    if status.get("outcome") not in {"verified_match", "verified_disagree"} or not status.get("figures_final"):
+        return False, "not_confirmed"
     if status.get("night") != night:
         return False, "wrong_night"
     if status.get("business_date") != business:
@@ -26,15 +28,17 @@ def workbook_eval(status: dict | None, workbook: Path | None, now: datetime) -> 
     modified = datetime.fromtimestamp(workbook.stat().st_mtime, tz=now.tzinfo).astimezone(now.tzinfo)
     if modified.date() != now.date():
         return False, "stale_mtime"
-    readback = verify_workbook(
-        workbook,
-        night=night,
-        business_date=business,
-    )
-    if not readback.get("ok"):
+    readback = status.get("readback") or {}
+    row_number = readback.get("row_number")
+    cells = readback.get("cells")
+    if not isinstance(row_number, int) or not isinstance(cells, list) or len(cells) < 8:
         return False, "readback_mismatch"
-    if str(readback.get("confirmed") or "").lower() not in {"yes", "true", "1"}:
-        return False, "not_confirmed"
+    found = read_row_cells(workbook, row_number)
+    expected = [str(cell) for cell in cells]
+    if found is None or found[: len(expected)] != expected or len(found) < 8 or found[7] != expected[7]:
+        return False, "readback_mismatch"
+    if column_h_hidden(sheet_xml(workbook)):
+        return False, "readback_mismatch"
     return True, "ok"
 
 

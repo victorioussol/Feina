@@ -69,7 +69,7 @@ python3 /root/.hermes/scripts/membr_download.py --date yesterday
 python3 /root/.hermes/scripts/afsa_reconcile.py --date yesterday --membr <file from the manifest>
 ```
 
-Read the short JSON they print. If `confirmed_write` is not true, the run failed, even when a cron status says ok. Say that plainly. Stay under 15 model calls: do not re-parse the spreadsheets in chat, and do not retry a `LOGIN_REQUIRED` result.
+Read the short JSON they print. If `confirmed_write` is not true, the run failed, even when a cron status says ok. Say that plainly. If `outcome` is `unverified`, or `figures_final` is not true, do not quote any figure as final. If `outcome` is `verified_disagree`, say what each platform shows and what Vince could check. Do not change a platform figure, and do not invent a workbook. Stay under 15 model calls: do not re-parse the spreadsheets in chat, and do not retry a `LOGIN_REQUIRED` result.
 
 ## What to avoid
 

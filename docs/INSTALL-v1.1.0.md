@@ -93,16 +93,32 @@ Do this once, with a person watching the browser. Membr must already be logged i
 
    Check the xlsx opens and the SHA-256 in the manifest matches `sha256sum` of the file.
 
-8. Enable `afsa-ingresos` as well, then reconcile and read the workbook back. With that flag off the script stays silent and writes nothing:
+8. From the inspect manifest, copy the real on-screen row-count and total selectors into the `read_screen` step. A night with no captured screen total is `NEEDS_CONFIRMATION` and is not written as a €0 day.
 
-   ```bash
-   python3 /root/.hermes/scripts/afsa_reconcile.py --date yesterday \
-     --membr ~/.hermes/feina-client/runs/<yesterday>/membr-pos-<yesterday>.xlsx
-   ```
+9. Install the approved scripts by hand. This template does not contain them:
 
-   The JSON must say `"confirmed_write": true`. If it does not, the run failed.
+   - `afsa_checks.py` (subcommand `export`)
+   - `update_workbook.py`
+   - the `membr-card-reconciliation` skill
+   - `references/af-ingresos-daily.md`
 
-9. Only then review `CRON-COMMANDS.sh` and register the jobs you enabled. Drop Paycomet and Harlands exports in `~/.hermes/feina-client/inbox/` as `paycomet-YYYY-MM-DD.xlsx` and `harlands-YYYY-MM-DD.xlsx` when you have them. They are optional until `required: true`.
+   Put the two scripts in `/root/.hermes/scripts/` or point `FEINA_AFSA_CHECKS` and `FEINA_UPDATE_WORKBOOK` at them. Do not edit their gap or tolerance. This template applies none of its own.
+
+10. Enable `afsa-ingresos`. The workbook must already be Vince's AFSA Ingresos file (one row per day, column H visible). The script will not create a new one.
+
+    ```bash
+    python3 /root/.hermes/scripts/afsa_reconcile.py --date yesterday \
+      --membr ~/.hermes/feina-client/runs/<yesterday>/membr-pos-<yesterday>.xlsx \
+      --paycomet ~/.hermes/feina-client/inbox/paycomet-<yesterday>.xlsx \
+      --harlands ~/.hermes/feina-client/inbox/harlands-<yesterday>.xlsx \
+      --workbook /path/to/AFSA-Ingresos.xlsx
+    ```
+
+    `confirmed_write: true` is allowed only when `figures_final` is true. `outcome` is `verified_match`, `verified_disagree`, or `unverified`. An unverified result quotes no figure. If the approved scripts are missing, the status is `CHECKS_UNAVAILABLE` and the workbook is untouched.
+
+11. Only then review `CRON-COMMANDS.sh` and register the jobs you enabled. Paycomet and Harlands files are required for a cross-check. A Membr-only day is reported as not cross-checked and is not called clean.
+
+12. A hand-checked day is not in this template. `20 Oct 2026` as workbook row 294 is an example of the layout, not an expected result. When a checked day exists, drop its JSON (`date`, `row_number`, `cells`) into the golden fixture directory and run the harness. Until then the harness reports that nothing was supplied.
 
 ## What stays manual
 

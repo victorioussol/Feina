@@ -11,6 +11,7 @@ Nothing in this file was checked against Vince's live Membr. The script refuses 
 | Date fields | The manual says dates are listed on the left and open a date picker | `input[name='dateFrom']` and `input[name='dateTo']` |
 | Run Report | The EU manual tells the user to click Run Report | "Ejecutar informe" and the button's selector |
 | Download | The manual says Download exports all pages to Excel | `button:has-text('Download')`, Descargar, Export, Excel |
+| On-screen count and total | The file is checked against the number Membr shows | `.report-row-count`, `[data-row-count]`, `.report-total`, `[data-report-total]` |
 | member_payments | Not named as a specific menu entry in the manuals we used | The whole report. It ships `enabled: false` |
 | direct_debits | Same | The whole report. It ships `enabled: false` |
 | Cookie names | A session lasts about 24 hours in Vince's history. That duration is observed, not documented | `PHPSESSID`, `membr_session`, `MEMBRSESSID`, `remember_me`, `access_token` |

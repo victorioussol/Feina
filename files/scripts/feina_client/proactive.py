@@ -21,8 +21,10 @@ TEXTS = {
         "ack": "Je m'en occupe. Je vous écris dès que c'est prêt.",
         "queued": "Je termine encore une tâche. Celle-ci est en file d'attente.",
         "nightly_busy": "Le traitement de la nuit est en cours. Votre demande est en file d'attente.",
-        "daily_clean": "✅ AFSA Ingresos est prêt pour le {date}. Aucun écart.",
-        "daily_bad": "✅ AFSA Ingresos est prêt pour le {date}. {n} écart(s) à vérifier :\n{lines}\nDites-moi si vous voulez le détail.",
+        "daily_clean": "✅ AFSA Ingresos est prêt pour le {date}. Vérifié : Membr, Paycomet et Harlands concordent.",
+        "daily_bad": "Vérifié pour le {date}, mais les plateformes ne concordent pas. {n} écart(s) :\n{lines}\nÀ contrôler : {hint}\nJe ne modifie aucun chiffre des plateformes.",
+        "daily_unverified": "Je n'ai pas pu vérifier le {date} ({reason}). Aucun chiffre n'est donné comme définitif.",
+        "membr_only": "Membr seulement pour le {date}, pas de contrôle croisé. Aucun chiffre n'est donné comme définitif.",
         "monday_empty": "",
         "monday": "Lundi — ce qui a bougé :\n{lines}",
         "debits_none": "",
@@ -39,8 +41,10 @@ TEXTS = {
         "ack": "Me pongo con ello. Le escribo en cuanto esté listo.",
         "queued": "Sigo con otra tarea. La suya queda en cola.",
         "nightly_busy": "El cierre de la noche está en curso. Su petición queda en cola.",
-        "daily_clean": "✅ AFSA Ingresos está listo para el {date}. Ningún descuadre.",
-        "daily_bad": "✅ AFSA Ingresos está listo para el {date}. {n} descuadre(s):\n{lines}\nDígame si quiere el detalle.",
+        "daily_clean": "✅ AFSA Ingresos está listo para el {date}. Verificado: Membr, Paycomet y Harlands coinciden.",
+        "daily_bad": "Verificado para el {date}, pero las plataformas no coinciden. {n} descuadre(s):\n{lines}\nA revisar: {hint}\nNo modifico ninguna cifra de las plataformas.",
+        "daily_unverified": "No he podido verificar el {date} ({reason}). No doy ninguna cifra como definitiva.",
+        "membr_only": "Solo Membr para el {date}, sin cruce. No doy ninguna cifra como definitiva.",
         "monday": "Lunes — solo lo que se ha movido:\n{lines}",
         "debits": "Adeudos devueltos: {n}.\n{lines}\nBorradores debajo. No se envía nada sin su sí.\n{drafts}",
         "draft": "Borrador para {ref} ({amount} €): hola, el adeudo del {date} no se ha cobrado. ¿Puede revisar el método de pago?",
@@ -55,8 +59,10 @@ TEXTS = {
         "ack": "On it. I'll message you when it's done.",
         "queued": "I'm still on another task. This one is queued.",
         "nightly_busy": "The night job is still running. Your request is queued.",
-        "daily_clean": "✅ AFSA Ingresos is ready for {date}. No mismatches.",
-        "daily_bad": "✅ AFSA Ingresos is ready for {date}. {n} mismatch(es):\n{lines}\nTell me if you want the detail.",
+        "daily_clean": "✅ AFSA Ingresos is ready for {date}. Verified: Membr, Paycomet and Harlands match.",
+        "daily_bad": "Verified for {date}, but the platforms disagree. {n} item(s):\n{lines}\nCheck: {hint}\nI do not change any platform figure.",
+        "daily_unverified": "I could not verify {date} ({reason}). No figure is given as final.",
+        "membr_only": "Membr only for {date}, not cross-checked. No figure is given as final.",
         "monday": "Monday — only what moved:\n{lines}",
         "debits": "Failed direct debits: {n}.\n{lines}\nDrafts below. Nothing is sent without your yes.\n{drafts}",
         "draft": "Draft for {ref} ({amount}): hello, the {date} collection did not go through. Could you check the payment method?",
@@ -260,17 +266,51 @@ def notable_changes(current: dict, previous: dict, *, minimum: float = 1, percen
     return lines
 
 
+def _item_line(row: dict) -> str:
+    receipt = row.get("receipt") or row.get("ref") or ""
+    parts = [str(receipt)]
+    for system in ("membr", "paycomet", "harlands"):
+        if row.get(system):
+            parts.append(f"{system} {row.get(system)}")
+    return " ".join(part for part in parts if part)
+
+
 def compose_daily(lang: str, night: dict | None, *, when_clean: bool) -> str | None:
-    if not night or not night.get("confirmed_write"):
+    """Three outcomes. Unverified nights never quote a figure as final."""
+    if not night:
         return None
-    mismatches = list(night.get("mismatches") or [])
     when = night.get("business_date") or ""
-    if not mismatches:
+    phrase = night.get("phrase") or ""
+    if phrase == "Membr only, not cross-checked" or night.get("reason") == "membr_only":
+        return text(lang, "membr_only", date=when)
+    outcome = night.get("outcome")
+    if outcome == "verified_match" and night.get("confirmed_write") and night.get("figures_final"):
         if not when_clean:
             return None
         return text(lang, "daily_clean", date=when)
-    lines = "\n".join(f"- {row.get('kind')} {row.get('ref')} {row.get('amount')}" for row in mismatches)
-    return text(lang, "daily_bad", date=when, n=len(mismatches), lines=lines)
+    if outcome == "verified_disagree" and night.get("figures_final"):
+        items = list(night.get("items") or [])
+        lines = "\n".join(f"- {_item_line(row)}" for row in items) or "- (see the workbook row)"
+        hint = ""
+        for row in items:
+            if row.get("check"):
+                hint = str(row["check"])
+                break
+        if not hint:
+            hint = "Look up that receipt in Membr or Paycomet."
+        return text(lang, "daily_bad", date=when, n=len(items) or 1, lines=lines, hint=hint)
+    if outcome == "unverified" or night.get("status") in {
+        "SOURCE_FORMAT_CHANGED",
+        "PARSE_FAILED",
+        "NEEDS_CONFIRMATION",
+        "SCREEN_MISMATCH",
+        "CHECKS_UNAVAILABLE",
+        "LOGIN_REQUIRED",
+        "FAILED",
+    }:
+        reason = night.get("reason") or night.get("status") or "unverified"
+        return text(lang, "daily_unverified", date=when, reason=reason)
+    return None
 
 
 def compose_monday(lang: str, changes: list[str], debits: list[dict], business_date: str) -> str | None:

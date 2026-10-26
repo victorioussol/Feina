@@ -1,6 +1,8 @@
 # Local workbook settings. Drive upload stays a separate, explicit step.
+# No gap and no tolerance live here. afsa_checks.py owns any comparison
+# tolerance, and that script is not part of this template.
 workbook: "workbooks/AFSA-Ingresos.xlsx"
-gap_eur: 5
+tolerance: null
 require_drive_readback: false
 drive: NOT_RUN
 model_call_budget: 15

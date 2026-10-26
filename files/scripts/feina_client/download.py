@@ -170,6 +170,17 @@ def _one_report(session, report, *, club_base, business_date, out_dir, mode, man
             wall = _wall(session, club_base)
             if wall:
                 raise LoginRequired(wall)
+        elif action == "read_screen":
+            captured = {"count_text": None, "total_text": None}
+            if hasattr(session, "read_screen"):
+                captured = session.read_screen(
+                    step.get("count_selectors") or [],
+                    step.get("total_selectors") or [],
+                ) or captured
+            manifest["screen"] = {
+                "count_text": captured.get("count_text"),
+                "total_text": captured.get("total_text"),
+            }
         elif action == "download":
             if mode != "download":
                 continue
@@ -180,11 +191,14 @@ def _one_report(session, report, *, club_base, business_date, out_dir, mode, man
             dest = out_dir / filename
             session.download(step.get("selectors") or [], dest)
             digest = sha256_file(dest)
+            screen = manifest.get("screen") or {}
             return {
                 "report": report.get("id"),
                 "path": str(dest),
                 "sha256": digest,
                 "bytes": dest.stat().st_size,
+                "screen_count_text": screen.get("count_text"),
+                "screen_total_text": screen.get("total_text"),
             }
         else:
             raise ValueError(f"unknown step {action}")

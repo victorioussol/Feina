@@ -98,12 +98,43 @@ def test_nothing_to_say_stays_silent_and_french_copy_is_used():
     assert external_send_allowed() is False
     night = {
         "confirmed_write": True,
+        "figures_final": True,
+        "outcome": "verified_disagree",
         "business_date": "2026-10-25",
-        "mismatches": [{"kind": "total_gap", "amount": "12.00", "ref": "card-vs-paycomet", "source": "totals"}],
+        "items": [
+            {
+                "receipt": "M1",
+                "membr": "12.00",
+                "paycomet": "10.00",
+                "check": "Look up receipt M1 in Membr or Paycomet.",
+            }
+        ],
     }
     body = compose_daily("fr", night, when_clean=True)
-    assert "AFSA Ingresos" in body and "écart" in body
-    clean = compose_daily("fr", {"confirmed_write": True, "business_date": "2026-10-25", "mismatches": []}, when_clean=False)
+    assert "écart" in body and "12.00" in body and "10.00" in body
+    assert "Look up receipt M1" in body
+    unverified = compose_daily(
+        "fr",
+        {
+            "outcome": "unverified",
+            "reason": "source_format_changed",
+            "business_date": "2026-10-25",
+            "items": [{"membr": "99.00"}],
+        },
+        when_clean=True,
+    )
+    assert "99.00" not in unverified
+    assert "définitif" in unverified
+    clean = compose_daily(
+        "fr",
+        {
+            "confirmed_write": True,
+            "figures_final": True,
+            "outcome": "verified_match",
+            "business_date": "2026-10-25",
+        },
+        when_clean=False,
+    )
     assert clean is None
 
 
@@ -146,7 +177,13 @@ def test_tax_and_month_end_calendar():
 def test_morning_bundle_stops_at_two_messages():
     state = {}
     now = at(2026, 6, 1, 9, 0)  # Monday and the first working day
-    night = {"confirmed_write": True, "business_date": "2026-05-31", "mismatches": [], "failed_debits": []}
+    night = {
+        "confirmed_write": True,
+        "figures_final": True,
+        "outcome": "verified_match",
+        "business_date": "2026-05-31",
+        "failed_debits": [],
+    }
     body = morning_bundle(
         state,
         lang="fr",

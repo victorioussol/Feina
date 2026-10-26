@@ -22,7 +22,11 @@ Daily workbook note, Monday changes and failed-debit drafts, month-end and AEAT 
 
 ### Evals
 
-No-LLM checks: workbook written and read back by 06:00, under 15 model calls and 20 minutes, and a fresh Membr session. Failures go to Slack. A night with no confirmed workbook write is a failure even if Hermes cron says otherwise.
+No-LLM checks: workbook written and read back by 06:00, under 15 model calls and 20 minutes, and a fresh Membr session. Failures go to Slack. A night with no confirmed workbook write is a failure even if Hermes cron says otherwise. An unverified night is not a success.
+
+### Accuracy (same version)
+
+The night job no longer builds its own Resumen / Descuadres / Control workbook and no longer applies a €5 pairing rule. It checks the downloaded files and stops without a final figure when the format, the parse, the date range, the on-screen total, or a source is not right. Duplicates and unclassified rows are listed and not written. The day's row is written only by the approved `update_workbook.py`, into Vince's existing AFSA Ingresos file, after a SHA-256 backup, and only that row may change. `afsa_checks.py`, `update_workbook.py`, the `membr-card-reconciliation` skill, and `references/af-ingresos-daily.md` are not in this repository. This template applies no tolerance of its own. The on-screen total must equal the file exactly. No hand-checked past day is stored here; 20 Oct 2026 as row 294 is a layout example, and the golden harness compares a day only after one is supplied.
 
 ## Template v1.0.0
 

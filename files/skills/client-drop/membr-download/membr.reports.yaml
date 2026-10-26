@@ -57,6 +57,11 @@ reports:
         texts: ["Run Report", "Ejecutar informe", "Ejecutar"]
         guess: partial
         source: "EU manual: click Run Report. Spanish labels are guesses."
+      - action: read_screen
+        count_selectors: [".report-row-count", "[data-row-count]"]
+        total_selectors: [".report-total", "[data-report-total]"]
+        guess: true
+        source: "On-screen row count and total. The selectors are guesses until --inspect."
       - action: download
         selectors:
           - "button:has-text('Download')"

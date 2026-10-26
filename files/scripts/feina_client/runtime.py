@@ -44,6 +44,11 @@ ALERT_CODES = frozenset(
         "script_error",
         "timezone_window",
         "lock_busy",
+        "source_format_changed",
+        "parse_failed",
+        "needs_confirmation",
+        "screen_mismatch",
+        "checks_unavailable",
     }
 )
 

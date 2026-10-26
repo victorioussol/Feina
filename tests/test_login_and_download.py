@@ -32,6 +32,9 @@ class FakeSession:
         self.gotos: list[str] = []
         self.download_book = download_book
         self.closed = False
+        self.screen_reads: list[tuple[list[str], list[str]]] = []
+        self.count_text = None
+        self.total_text = None
 
     def goto(self, url: str) -> None:
         self.gotos.append(url)
@@ -55,6 +58,10 @@ class FakeSession:
 
     def fill(self, selector: str, value: str) -> None:
         self.fills.append((selector, value))
+
+    def read_screen(self, count_selectors: list[str], total_selectors: list[str]) -> dict:
+        self.screen_reads.append((list(count_selectors), list(total_selectors)))
+        return {"count_text": self.count_text, "total_text": self.total_text}
 
     def download(self, selectors: list[str], dest: Path) -> None:
         self.downloads.append(list(selectors))
@@ -171,6 +178,41 @@ def test_download_clicks_dates_and_saves_hash(fixtures: Path, tmp_path: Path):
     assert manifest["files"][0]["sha256"]
     assert manifest["files"][0]["report"] == "pos_transactions"
     assert len(manifest["files"][0]["sha256"]) == 64
+
+
+def test_download_stores_the_on_screen_count_and_total_without_editing_them(fixtures: Path, tmp_path: Path):
+    html = _html(fixtures, "reports.html")
+    book = {"Sheet1": [["Fecha", "Importe"], ["2026-10-25", "10.00"]]}
+    session = FakeSession([(f"{CLUB}/reports", html)], download_book=book)
+    session.count_text = "Rows: 1"
+    session.total_text = "Total 10,00 €"
+    manifest = run_download(
+        _cfg(
+            [
+                {"action": "click_text", "texts": ["Reports"]},
+                {
+                    "action": "read_screen",
+                    "count_selectors": [".report-row-count", "input[type='password']"],
+                    "total_selectors": [".report-total"],
+                },
+                {"action": "download", "selectors": ["text=Download"]},
+            ]
+        ),
+        business_date="2026-10-25",
+        out_dir=tmp_path,
+        session=session,
+        mode="download",
+    )
+    assert manifest["status"] == "OK"
+    assert session.screen_reads == [([".report-row-count", "input[type='password']"], [".report-total"])]
+    assert session.fills == []
+    saved = manifest["files"][0]
+    assert saved["screen_count_text"] == "Rows: 1"
+    assert saved["screen_total_text"] == "Total 10,00 €"
+    from feina_client.browser import assert_safe_selector
+
+    assert assert_safe_selector("input[type='password']") is False
+    assert assert_safe_selector(".report-total") is True
 
 
 def test_inspect_records_structure_and_does_not_download(fixtures: Path, tmp_path: Path):

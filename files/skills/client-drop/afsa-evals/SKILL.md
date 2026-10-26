@@ -13,7 +13,7 @@ Off until `/root/.hermes/feina-client/enabled/afsa-evals` exists. These scripts 
 
 | Check | Pass | Slack code when it fails |
 |---|---|---|
-| Workbook, 06:00 Madrid | Today's night has `confirmed_write`, status `CONFIRMED`, and the workbook's Resumen row for yesterday reads back | `workbook_missing`, `not_confirmed`, `stale_mtime`, `readback_mismatch` |
+| Workbook, 06:00 Madrid | Today's night has `confirmed_write`, a final verified outcome, and the target day's cells read back. Column H is not hidden | `workbook_missing`, `not_confirmed`, `stale_mtime`, `readback_mismatch` |
 | Step budget, 06:05 | `model_calls` under 15 and `duration_sec` under 20 minutes | `step_budget`, `duration`, `no_run_record` |
 | Session freshness | The 20:00 and 03:30 login check already decided this. The 06:10 script only re-reads that result and does not open Membr | `session_stale` if the check never ran. A login failure uses the one-a-day login alert |
 

@@ -39,13 +39,26 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if not result.get("confirmed_write"):
         reason = str(result.get("reason") or "")
+        status = str(result.get("status") or "")
         code = {
             "login": "login_page",
             "login_page": "login_page",
             "captcha": "captcha",
             "no_profile": "no_profile",
             "no_session": "no_profile",
-        }.get(reason, "workbook_missing")
+            "SOURCE_FORMAT_CHANGED": "source_format_changed",
+            "PARSE_FAILED": "parse_failed",
+            "NEEDS_CONFIRMATION": "needs_confirmation",
+            "SCREEN_MISMATCH": "screen_mismatch",
+            "CHECKS_UNAVAILABLE": "checks_unavailable",
+            "FAILED": "readback_mismatch",
+        }.get(status, {
+            "login": "login_page",
+            "login_page": "login_page",
+            "captcha": "captcha",
+            "no_profile": "no_profile",
+            "no_session": "no_profile",
+        }.get(reason, "workbook_missing"))
         post_ops_alert(code, part="afsa-ingresos", when=madrid_now())
         return 0
     return 0
