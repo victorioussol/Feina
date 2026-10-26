@@ -1,0 +1,115 @@
+# Membr download config. Selectors are guesses until one supervised --inspect run.
+# The script only opens club_base_url, then clicks. It never calls another host.
+club_base_url: "https://REPLACE_CLUB.membr.com"
+timezone: Europe/Madrid
+pos_report_id: pos_transactions
+browser:
+  cdp_url: "http://127.0.0.1:9222"
+  # Must be the same directory as browser.user_data_dir in ~/.hermes/config.yaml.
+  user_data_dir: "~/.hermes/browser-profile"
+  # Guessed cookie names. --inspect records the real names (never the values).
+  cookie_names:
+    - PHPSESSID
+    - membr_session
+    - MEMBRSESSID
+reports:
+  - id: pos_transactions
+    enabled: true
+    required: true
+    filename: "pos-export.xlsx"
+    note: >
+      POS transactions for the target day. The English name "POS Transactions
+      Report" is in the public EU manual. The Spanish label is the one the
+      AFSA job uses and is not confirmed against the live club.
+    steps:
+      - action: click_text
+        texts: ["Reports", "Informes"]
+        guess: partial
+        source: "Zendesk: left nav is Reports. Spanish label is a guess."
+      - action: click_text
+        texts: ["Membr Report", "Informe Membr", "Report Builder"]
+        guess: partial
+        source: "Zendesk: Reports > Membr Report. Other labels are guesses."
+      - action: click_text
+        texts: ["My Reports", "Mis informes"]
+        guess: partial
+        source: "EU Report Builder manual names My Reports. Spanish is a guess."
+      - action: click_text
+        texts: ["Transacción Punto de Venta", "POS Transactions Report", "POS Transactions"]
+        guess: true
+        source: "Spanish name from the AFSA brief. English name from the EU POS manual."
+      - action: fill_date
+        selector: "input[name='dateFrom']"
+        which: from
+        guess: true
+        source: "The manual says dates sit on the left. This CSS selector is a guess."
+      - action: fill_date
+        selector: "input[name='dateTo']"
+        which: to
+        guess: true
+        source: "Guessed selector. Both ends are the target Madrid date."
+      - action: click_text
+        texts: ["Run Report", "Ejecutar informe", "Ejecutar"]
+        guess: partial
+        source: "EU manual: click Run Report. Spanish labels are guesses."
+      - action: read_screen
+        count_selectors: [".report-row-count", "[data-row-count]"]
+        total_selectors: [".report-total", "[data-report-total]"]
+        guess: true
+        source: "On-screen row count and total. The selectors are guesses until --inspect."
+      - action: download
+        selectors:
+          - "button:has-text('Download')"
+          - "text=Descargar"
+          - "text=Export"
+          - "text=Excel"
+        guess: true
+        source: "The manual says a Download button exports every page to Excel. The selector is a guess."
+  - id: member_payments
+    enabled: false
+    required: false
+    filename: "membr-payments-{date}.xlsx"
+    note: "Whole menu path is a guess. Leave disabled until --inspect shows the real report."
+    steps:
+      - action: click_text
+        texts: ["My Reports", "Mis informes"]
+        guess: true
+      - action: click_text
+        texts: ["Payments", "Pagos", "Transacciones"]
+        guess: true
+      - action: fill_date
+        selector: "input[name='dateFrom']"
+        guess: true
+      - action: fill_date
+        selector: "input[name='dateTo']"
+        guess: true
+      - action: click_text
+        texts: ["Run Report", "Ejecutar informe"]
+        guess: true
+      - action: download
+        selectors: ["text=Download", "text=Descargar", "text=Excel"]
+        guess: true
+  - id: direct_debits
+    enabled: false
+    required: false
+    filename: "membr-debits-{date}.xlsx"
+    note: "Whole menu path is a guess. Harlands is a separate inbox file, not this report."
+    steps:
+      - action: click_text
+        texts: ["My Reports", "Mis informes"]
+        guess: true
+      - action: click_text
+        texts: ["Direct Debits", "Domiciliaciones", "Adeudos"]
+        guess: true
+      - action: fill_date
+        selector: "input[name='dateFrom']"
+        guess: true
+      - action: fill_date
+        selector: "input[name='dateTo']"
+        guess: true
+      - action: click_text
+        texts: ["Run Report", "Ejecutar informe"]
+        guess: true
+      - action: download
+        selectors: ["text=Download", "text=Descargar", "text=Excel"]
+        guess: true

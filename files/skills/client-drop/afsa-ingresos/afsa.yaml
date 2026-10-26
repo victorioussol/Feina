@@ -1,0 +1,9 @@
+# Local workbook settings. Drive upload stays a separate, explicit step.
+# The approved scripts have no tolerance. Amounts match to the cent.
+# Harlands is not an input of this daily row.
+workbook: "workbooks/AFSA-Ingresos.xlsx"
+tolerance: null
+require_drive_readback: false
+drive: NOT_RUN
+model_call_budget: 15
+duration_budget_minutes: 20

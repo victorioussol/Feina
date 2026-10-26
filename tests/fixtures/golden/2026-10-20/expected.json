@@ -1,0 +1,108 @@
+{
+  "business_date": "2026-10-20",
+  "sheet": "2026",
+  "row": 294,
+  "source_workbook": {
+    "name": "2026-10-21_2026-10-22T0204.xlsx",
+    "sha256": "44c74c42a4df9597d396558fc3e88100826229b9c8e339117f4e75ca15c3e965",
+    "note": "raw workbook kept box-only; not part of golden"
+  },
+  "header_row": 1,
+  "header": {
+    "A": null,
+    "B": "Date",
+    "C": "Ingreso Total Membr",
+    "D": "Tarjeta",
+    "E": "efectivo/bizum",
+    "F": "Banco",
+    "G": "Dif banco/tarjeta",
+    "H": "Comentario"
+  },
+  "row_values": {
+    "A": null,
+    "B": "20 Octubre",
+    "C": 135.49,
+    "D": "=C294-E294",
+    "E": -24,
+    "F": 159.49,
+    "G": "=F294-D294",
+    "H": null
+  },
+  "row_cached_values": {
+    "A": null,
+    "B": "20 Octubre",
+    "C": 135.49,
+    "D": 159.49,
+    "E": -24,
+    "F": 159.49,
+    "G": 0,
+    "H": null
+  },
+  "row_cells": {
+    "C294": {
+      "value": 135.49,
+      "cached_value": 135.49,
+      "number_format": "#,##0.00_);[Red](#,##0.00)",
+      "font_color": null,
+      "fill_fg": "FFFFFFFF",
+      "fill_pattern": "solid"
+    },
+    "D294": {
+      "value": "=C294-E294",
+      "cached_value": 159.49,
+      "number_format": "#,##0.00_);[Red](#,##0.00)",
+      "font_color": null,
+      "fill_fg": "FFFFFFFF",
+      "fill_pattern": "solid"
+    },
+    "E294": {
+      "value": -24,
+      "cached_value": -24,
+      "number_format": "#,##0.00_);[Red](#,##0.00)",
+      "font_color": null,
+      "fill_fg": "FFFFFFFF",
+      "fill_pattern": "solid"
+    },
+    "F294": {
+      "value": 159.49,
+      "cached_value": 159.49,
+      "number_format": "#,##0.00_);[Red](#,##0.00)",
+      "font_color": null,
+      "fill_fg": "FFFFFFFF",
+      "fill_pattern": "solid"
+    },
+    "G294": {
+      "value": "=F294-D294",
+      "cached_value": 0,
+      "number_format": "#,##0.00;\\-#,##0.00;0.00",
+      "font_color": "FF008000",
+      "fill_fg": "FFFFFFFF",
+      "fill_pattern": "solid"
+    },
+    "H294": {
+      "value": null,
+      "cached_value": null,
+      "number_format": "General",
+      "font_color": null,
+      "fill_fg": "00000000",
+      "fill_pattern": null
+    }
+  },
+  "row_height": 16.0,
+  "column_H_hidden": false,
+  "tabs": [
+    "2026",
+    "2025",
+    "2024",
+    "2023",
+    "2022"
+  ],
+  "expected_decimal_strings_C_to_G": [
+    "135.49",
+    "159.49",
+    "-24.00",
+    "159.49",
+    "0.00"
+  ],
+  "expected_G_font_color": "FF008000"
+}

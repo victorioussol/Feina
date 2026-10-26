@@ -1,0 +1,34 @@
+{
+  "business_date": "2026-10-20",
+  "payment_reports_total": "159.49",
+  "providers": [
+    {
+      "provider": "Paycomet",
+      "file": "resumen_347360075_T0000001_202610210123.pdf",
+      "file_md5": "6c161ac3249db4d02ac5225654b01fee",
+      "operation_count": 1,
+      "operations": [
+        {"date": "2026-10-20", "time": "19:01", "amount": "39.69"}
+      ],
+      "merchant_closing_total": "39.69",
+      "detail_total": "39.69"
+    },
+    {
+      "provider": "Redsys",
+      "file": "6874_347360075_99871480206_20102026.pdf",
+      "file_md5": "c2b71c5140e607c1c3dd52942fb5cd29",
+      "operation_count": 2,
+      "operations": [
+        {"date": "2026-10-20", "time": "12:52", "amount": "59.90"},
+        {"date": "2026-10-20", "time": "12:52", "amount": "59.90"}
+      ],
+      "declared_closing_total": null,
+      "extracted_total": "119.80",
+      "timing_caveat": "The two-slip total equals one Membr POS card receipt of 119.80 at 13:27:35, but the timestamps differ by 35 minutes 35 seconds and no shared transaction reference is available; transaction-level identity is unconfirmed."
+    }
+  ],
+  "date_validation": {
+    "strict_initial_checker": "failed to parse Redsys dd.mm.yy format",
+    "normalized_recheck": "PASS; both PDFs checked, every transaction date 2026-10-20, no duplicate report reuse among verified dates"
+  }
+}
