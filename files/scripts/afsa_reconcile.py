@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Reconcile files already on disk and verify the workbook by reading it back.
+"""Run the approved AFSA checks on files already on disk.
 
 The nightly job calls the library directly. This entrypoint is what the agent
-runs after membr_download.py, so the model does not parse the spreadsheets.
+runs after membr_download.py. Harlands is not an argument: it is not an input
+of the daily AFSA row.
 """
 
 from __future__ import annotations
@@ -23,12 +24,14 @@ from feina_client.runtime import client_root, madrid_now, sha256_file  # noqa: E
 def main(argv: list[str] | None = None) -> int:
     import argparse
 
-    parser = argparse.ArgumentParser(description="Reconcile AFSA inputs and verify the workbook")
+    parser = argparse.ArgumentParser(description="Run the approved AFSA checks and stage the workbook")
     parser.add_argument("--date", default="yesterday")
-    parser.add_argument("--membr", required=False)
-    parser.add_argument("--paycomet", default="")
-    parser.add_argument("--harlands", default="")
+    parser.add_argument("--membr", default="")
+    parser.add_argument("--pdf", action="append", default=[])
+    parser.add_argument("--evidence", action="append", default=[])
+    parser.add_argument("--payload", default="")
     parser.add_argument("--workbook", default="")
+    parser.add_argument("--since", default="")
     parser.add_argument("--verify-drive", default="")
     args = parser.parse_args(argv)
     if not enabled("afsa-ingresos"):
@@ -41,40 +44,35 @@ def main(argv: list[str] | None = None) -> int:
         ok, reason = verify_drive_readback(meta, local_sha=sha256_file(book), madrid_day=madrid_now().date())
         sys.stdout.write(json.dumps({"drive_ok": ok, "reason": reason}) + "\n")
         return 0 if ok else 2
-    if not args.membr:
-        sys.stderr.write("membr xlsx required\n")
-        return 2
-    membr = Path(args.membr)
-    pay = Path(args.paycomet) if args.paycomet else None
-    har = Path(args.harlands) if args.harlands else None
+    membr = Path(args.membr) if args.membr else None
+    screen_count, screen_total = _screen_from_manifest(membr) if membr else (None, None)
     book = Path(args.workbook) if args.workbook else client_root() / "workbooks" / "AFSA-Ingresos.xlsx"
-    screen_count, screen_total = _screen_from_manifest(membr)
+    payload = Path(args.payload) if args.payload else None
     reviewed = review_day(
         business_date=date.fromisoformat(business),
-        membr=membr,
-        paycomet=pay if pay and pay.is_file() else None,
-        harlands=har if har and har.is_file() else None,
+        membr=membr if membr and membr.is_file() else None,
+        pdfs=[Path(item) for item in args.pdf],
+        evidence=[Path(item) for item in args.evidence],
+        payload_path=payload if payload and payload.is_file() else None,
         workbook=book if book.is_file() else None,
         screen_count_text=screen_count,
         screen_total_text=screen_total,
+        since=args.since or None,
     )
-    payload = {
-        "night": night,
-        "model_calls": 0,
-        "drive": "NOT_RUN",
-    }
-    payload.update(reviewed)
-    save_night(payload)
+    payload_out = {"night": night, "model_calls": 0, "drive": "NOT_RUN"}
+    payload_out.update(reviewed)
+    save_night(payload_out)
     public = {
-        "status": payload.get("status"),
-        "outcome": payload.get("outcome"),
-        "confirmed_write": payload.get("confirmed_write"),
-        "figures_final": payload.get("figures_final"),
-        "reason": payload.get("reason"),
-        "phrase": payload.get("phrase"),
+        "status": payload_out.get("status"),
+        "outcome": payload_out.get("outcome"),
+        "confirmed_write": payload_out.get("confirmed_write"),
+        "figures_final": payload_out.get("figures_final"),
+        "reason": payload_out.get("reason"),
+        "phrase": payload_out.get("phrase"),
+        "export_covered": payload_out.get("export_covered"),
     }
     sys.stdout.write(json.dumps(public) + "\n")
-    return 0 if payload.get("confirmed_write") else 2
+    return 0 if payload_out.get("figures_final") else 2
 
 
 def _screen_from_manifest(membr: Path) -> tuple[str | None, str | None]:

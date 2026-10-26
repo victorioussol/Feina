@@ -1,22 +1,22 @@
-"""Feed downloaded files to the approved AFSA checks. Do not invent the day.
+"""Run the approved AFSA checks, then stage one workbook row.
 
-The template does not contain afsa_checks.py, update_workbook.py, the
-membr-card-reconciliation skill, or references/af-ingresos-daily.md. Until
-those are on the client computer, a day is unverified and nothing is written.
+Harlands is not an input of this daily row. There is no tolerance: the
+approved scripts match dates and cents exactly. This module does not change
+a platform figure and does not invent a payment total. `dates` checks PDF
+dates only. The payment total has to already be in daily-payload.json.
 
-No tolerance is applied here. The on-screen total must equal the sum of the
-amount column exactly. Platform figures are never adjusted.
+`afsa_checks.py final` is the only step that marks a day verified. A staged
+row is not a final figure.
 """
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
+from decimal import Decimal
 from pathlib import Path
 
-from .approved import find_approved, run_export, run_update
-from .runtime import client_root, sha256_file
-from .source_gate import GateResult, inspect_xlsx
-from .workbook_guard import apply_day_row
+from .approved import find_approved, run_dates, run_export, run_final, run_gaps, run_update
+from .runtime import backup_file, client_root, sha256_file
 
 OUTCOME_MATCH = "verified_match"
 OUTCOME_DISAGREE = "verified_disagree"
@@ -24,7 +24,11 @@ OUTCOME_UNVERIFIED = "unverified"
 
 
 def verify_drive_readback(meta: dict, *, local_sha: str, madrid_day: date) -> tuple[bool, str]:
-    """Check a Drive metadata dict the agent saved after uploading the workbook."""
+    """Check a Drive metadata dict the agent saved after uploading the workbook.
+
+    This does not mark the day verified. `afsa_checks.py final` does that,
+    and only after last-success.json exists at the path that script reads.
+    """
     remote = str(meta.get("sha256") or meta.get("md5Checksum") or "")
     if meta.get("sha256") and remote != local_sha:
         return False, "hash_mismatch"
@@ -42,189 +46,224 @@ def verify_drive_readback(meta: dict, *, local_sha: str, madrid_day: date) -> tu
     return True, "ok"
 
 
-def _review_refs(*sources: tuple[str, GateResult, bool]) -> tuple[list[str], list[str]]:
-    duplicates: list[str] = []
-    unclassified: list[str] = []
-    for name, gate, present in sources:
-        if not present or gate.status != "OK":
-            continue
-        duplicates.extend(f"{name}:{ref}" for ref in gate.duplicates)
-        unclassified.extend(f"{name}:{ref}" for ref in gate.unclassified)
-    return duplicates, unclassified
-
-
-def _source_label(result: GateResult, present: bool) -> str:
-    if not present or result.check_state == "not_checked":
-        return "not_checked"
-    if result.status != "OK" or result.duplicates or result.unclassified:
-        return "mismatch"
-    return "checked"
-
-
-def _unverified(business: str, reason: str, sources: dict, **extra) -> dict:
+def _unverified(business: str, reason: str, **extra) -> dict:
     payload = {
         "business_date": business,
-        "status": extra.pop("status", reason if reason.isupper() else "NEEDS_CONFIRMATION"),
+        "status": extra.pop("status", "NEEDS_CONFIRMATION"),
         "reason": reason,
         "outcome": OUTCOME_UNVERIFIED,
         "figures_final": False,
         "confirmed_write": False,
-        "sources_state": sources,
-        "items": [],
-        "review_refs": extra.pop("review_refs", []),
-        "phrase": extra.pop("phrase", ""),
         "tolerance": None,
+        "export_covered": extra.pop("export_covered", False),
+        "items": [],
+        "phrase": extra.pop("phrase", ""),
+        "problems": extra.pop("problems", []),
     }
     payload.update(extra)
     return payload
+
+
+def _money_equal(left: object, right: object) -> bool:
+    try:
+        return Decimal(str(left)).quantize(Decimal("0.01")) == Decimal(str(right)).quantize(Decimal("0.01"))
+    except Exception:
+        return False
 
 
 def review_day(
     *,
     business_date: date,
     membr: Path | None,
-    paycomet: Path | None,
-    harlands: Path | None,
+    pdfs: list[Path] | None,
     workbook: Path | None,
+    evidence: list[Path] | None = None,
+    payload_path: Path | None = None,
     screen_count_text: str | None = None,
     screen_total_text: str | None = None,
-    approved: dict | None = None,
+    since: str | None = None,
+    slack_on_fail: bool = True,
 ) -> dict:
-    """Check the files, then call the approved scripts if every source is real."""
+    """export, dates, update_workbook, final, gaps. Stop on the first failed check."""
     business = business_date.isoformat()
-    membr_present = membr is not None and membr.is_file() and membr.stat().st_size > 0
-    pay_present = paycomet is not None and paycomet.is_file() and paycomet.stat().st_size > 0
-    har_present = harlands is not None and harlands.is_file() and harlands.stat().st_size > 0
-    membr_gate = inspect_xlsx(
-        membr,
-        business_date=business_date,
-        screen_count_text=screen_count_text,
-        screen_total_text=screen_total_text,
-        require_screen=True,
-    )
-    pay_gate = (
-        inspect_xlsx(paycomet, business_date=business_date)
-        if pay_present
-        else GateResult("NEEDS_CONFIRMATION", "missing", rows=None, check_state="not_checked")
-    )
-    har_gate = (
-        inspect_xlsx(harlands, business_date=business_date)
-        if har_present
-        else GateResult("NEEDS_CONFIRMATION", "missing", rows=None, check_state="not_checked")
-    )
-    sources = {
-        "membr": _source_label(membr_gate, membr_present),
-        "paycomet": _source_label(pay_gate, pay_present),
-        "harlands": _source_label(har_gate, har_present),
+    screen = {
+        "count_text": screen_count_text,
+        "total_text": screen_total_text,
+        "captured": bool(screen_count_text or screen_total_text),
     }
-    if membr_gate.status != "OK":
+    found = find_approved()
+    if not found or not found.get("ok"):
         return _unverified(
             business,
-            membr_gate.reason,
-            sources,
-            status=membr_gate.status,
-            unparsed_count=membr_gate.unparsed_count,
-        )
-    for gate in (pay_gate, har_gate):
-        if pay_present and gate is pay_gate and gate.status != "OK":
-            return _unverified(business, gate.reason, sources, status=gate.status, unparsed_count=gate.unparsed_count)
-        if har_present and gate is har_gate and gate.status != "OK":
-            return _unverified(business, gate.reason, sources, status=gate.status, unparsed_count=gate.unparsed_count)
-    duplicates, unclassified = _review_refs(
-        ("membr", membr_gate, membr_present),
-        ("paycomet", pay_gate, pay_present),
-        ("harlands", har_gate, har_present),
-    )
-    if not pay_present or not har_present:
-        return _unverified(
-            business,
-            "membr_only",
-            sources,
-            status="NEEDS_CONFIRMATION",
-            phrase="Membr only, not cross-checked",
-            review_refs=duplicates + unclassified,
-            duplicates=duplicates,
-            unclassified=unclassified,
-        )
-    if duplicates or unclassified:
-        reason = "duplicate_ref" if duplicates else "unclassified"
-        return _unverified(
-            business,
-            reason,
-            sources,
-            status="NEEDS_CONFIRMATION",
-            review_refs=duplicates + unclassified,
-            duplicates=duplicates,
-            unclassified=unclassified,
-        )
-    found = approved if approved is not None else find_approved()
-    if not found:
-        return _unverified(business, "checks_unavailable", sources, status="CHECKS_UNAVAILABLE")
-    export = run_export(
-        found["checks"],
-        business_date=business,
-        membr=membr,
-        paycomet=paycomet,
-        harlands=harlands,
-    )
-    export_status = str(export.get("status") or "")
-    if export_status not in {"match", "disagree"}:
-        return _unverified(
-            business,
-            str(export.get("reason") or "checks_output"),
-            sources,
+            "checks_unavailable",
             status="CHECKS_UNAVAILABLE",
-            approved_spec=str(found.get("spec") or ""),
+            screen=screen,
+            mismatched=(found or {}).get("mismatched") or [],
         )
-    items = export.get("items") if isinstance(export.get("items"), list) else []
-    outcome = OUTCOME_MATCH if export_status == "match" else OUTCOME_DISAGREE
-    row = export.get("row")
-    row_number = export.get("row_number")
-    cells = [str(cell) for cell in row] if isinstance(row, list) else None
-    if not isinstance(row_number, int) or cells is None:
-        return _unverified(business, "checks_output", sources, status="CHECKS_UNAVAILABLE")
+    checks = found["checks"]
+    pdfs = [path for path in (pdfs or []) if path.is_file()]
+    evidence = [path for path in (evidence or []) if path.is_file()]
+    export_covered = bool(membr and membr.is_file() and membr.stat().st_size > 0)
+    export = None
+    if export_covered:
+        export = run_export(checks, business_date=business, xlsx=membr, slack_on_fail=slack_on_fail)
+        if export.get("result") != "PASS":
+            return _unverified(
+                business,
+                "export",
+                status="CHECK_FAIL",
+                export_covered=True,
+                problems=list(export.get("problems") or []),
+                screen=screen,
+                checks={"export": export},
+            )
+    elif payload_path is None or not payload_path.is_file():
+        return _unverified(
+            business,
+            "membr_export_missing",
+            status="NEEDS_CONFIRMATION",
+            export_covered=False,
+            screen=screen,
+        )
+    if not pdfs and not evidence:
+        return _unverified(
+            business,
+            "payment_reports_missing",
+            status="NEEDS_CONFIRMATION",
+            export_covered=export_covered,
+            screen=screen,
+            checks={"export": export} if export else {},
+        )
+    dates = run_dates(
+        checks,
+        business_date=business,
+        pdfs=pdfs,
+        evidence=evidence,
+        slack_on_fail=slack_on_fail,
+    )
+    if dates.get("result") != "PASS":
+        return _unverified(
+            business,
+            "dates",
+            status="CHECK_FAIL",
+            export_covered=export_covered,
+            problems=list(dates.get("problems") or []),
+            screen=screen,
+            checks={"export": export, "dates": dates},
+        )
+    if payload_path is None or not payload_path.is_file():
+        return _unverified(
+            business,
+            "payment_total_not_in_dates_check",
+            status="NEEDS_CONFIRMATION",
+            export_covered=export_covered,
+            screen=screen,
+            checks={"export": export, "dates": dates},
+        )
+    payload = json_load(payload_path)
+    if export is not None:
+        for key in ("pos_total_net", "pos_card", "pos_noncard_net"):
+            if not _money_equal(payload.get(key), export.get(key)):
+                return _unverified(
+                    business,
+                    "payload_does_not_match_export",
+                    status="CHECK_FAIL",
+                    export_covered=True,
+                    screen=screen,
+                    checks={"export": export, "dates": dates},
+                )
     if workbook is None or not workbook.is_file():
-        return _unverified(business, "workbook_missing", sources, status="NEEDS_CONFIRMATION")
-    row_json = client_root() / "state" / f"row-{business}.json"
-
-    def _writer() -> None:
-        run_update(
-            found["update"],
-            workbook=workbook,
-            business_date=business,
-            row_number=row_number,
-            cells=cells,
-            row_json=row_json,
+        return _unverified(
+            business,
+            "workbook_missing",
+            status="NEEDS_CONFIRMATION",
+            export_covered=export_covered,
+            screen=screen,
+            checks={"export": export, "dates": dates},
         )
-
-    written = apply_day_row(workbook, row_number=row_number, cells=cells, writer=_writer)
-    confirmed = bool(written.get("confirmed_write"))
-    payload = {
+    before = sha256_file(workbook)
+    backup = backup_file(workbook)
+    staged = client_root() / "runs" / business / "staged-AFSA-Ingresos.xlsx"
+    staged.parent.mkdir(parents=True, exist_ok=True)
+    updated = run_update(found["update"], source=workbook, payload=payload_path, output=staged)
+    if updated.get("returncode") != 0 or "row" not in updated:
+        return _unverified(
+            business,
+            "update_failed",
+            status="FAILED",
+            export_covered=export_covered,
+            screen=screen,
+            backup=str(backup) if backup else "",
+            backup_sha256=before,
+            checks={"export": export, "dates": dates, "update": updated},
+        )
+    if sha256_file(workbook) != before:
+        return _unverified(
+            business,
+            "source_workbook_changed",
+            status="FAILED",
+            export_covered=export_covered,
+            screen=screen,
+            backup=str(backup) if backup else "",
+        )
+    final = run_final(checks, business_date=business, since=since, slack_on_fail=slack_on_fail)
+    verified = final.get("result") == "PASS"
+    gaps = None
+    if verified:
+        gaps = run_gaps(
+            checks,
+            business_date=(business_date + timedelta(days=1)).isoformat(),
+            slack_on_fail=slack_on_fail,
+        )
+    difference = Decimal(str(updated.get("difference") or "0"))
+    if not verified:
+        outcome = OUTCOME_UNVERIFIED
+    elif difference == 0:
+        outcome = OUTCOME_MATCH
+    else:
+        outcome = OUTCOME_DISAGREE
+    items = []
+    if verified:
+        items.append(
+            {
+                "receipt": business,
+                "membr": updated.get("pos_card"),
+                "bank": updated.get("payment_reports_total"),
+                "difference": updated.get("difference"),
+                "check": "Look up that day's card receipts in Membr or the Paycomet and Redsys reports.",
+            }
+        )
+    return {
         "business_date": business,
-        "status": "CONFIRMED" if confirmed else "FAILED",
-        "reason": written.get("reason") or "ok",
-        "outcome": outcome if confirmed else OUTCOME_UNVERIFIED,
-        "figures_final": bool(confirmed and outcome in {OUTCOME_MATCH, OUTCOME_DISAGREE}),
-        "confirmed_write": confirmed,
-        "sources_state": sources,
-        "items": items if confirmed else [],
-        "review_refs": [],
-        "phrase": "",
+        "status": "CONFIRMED" if verified else "CHECK_FAIL",
+        "reason": "ok" if verified else "final",
+        "outcome": outcome,
+        "figures_final": verified,
+        "confirmed_write": verified,
+        "staged": True,
+        "staged_file": str(staged),
         "tolerance": None,
-        "readback": {
-            "ok": confirmed,
-            "row_number": row_number,
-            "cells": cells if confirmed else [],
-        },
+        "export_covered": export_covered,
+        "items": items,
+        "phrase": "",
+        "problems": list(final.get("problems") or []),
+        "screen": screen,
         "workbook": str(workbook),
-        "workbook_sha256": written.get("workbook_sha256") or "",
-        "backup": written.get("backup") or "",
-        "backup_sha256": written.get("backup_sha256") or "",
-        "approved_spec": str(found.get("spec") or ""),
-        "spec_sha256": found.get("spec_sha256") or "",
+        "workbook_sha256": before,
+        "backup": str(backup) if backup else "",
+        "backup_sha256": before,
+        "column_H_hidden": updated.get("column_H_hidden"),
+        "row": updated.get("row"),
+        "year_tab": updated.get("year_tab"),
+        "difference": updated.get("difference"),
+        "checks": {"export": export, "dates": dates, "update": updated, "final": final, "gaps": gaps},
     }
-    if not confirmed:
-        payload["figures_final"] = False
-        payload["items"] = []
-        payload["reason"] = written.get("reason") or "readback_mismatch"
-    return payload
+
+
+def json_load(path: Path) -> dict:
+    import json
+
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        return {}
+    return data

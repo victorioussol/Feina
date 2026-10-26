@@ -66,10 +66,10 @@ Do not click through Membr yourself. Do not log in, type a password, touch a cap
 
 ```text
 python3 /root/.hermes/scripts/membr_download.py --date yesterday
-python3 /root/.hermes/scripts/afsa_reconcile.py --date yesterday --membr <file from the manifest>
+python3 /root/.hermes/scripts/afsa_reconcile.py --date yesterday --membr <runs/<date>/pos-export.xlsx> --pdf <redsys> --pdf <paycomet> --payload <daily-payload.json> --workbook <AFSA Ingresos.xlsx>
 ```
 
-Read the short JSON they print. If `confirmed_write` is not true, the run failed, even when a cron status says ok. Say that plainly. If `outcome` is `unverified`, or `figures_final` is not true, do not quote any figure as final. If `outcome` is `verified_disagree`, say what each platform shows and what Vince could check. Do not change a platform figure, and do not invent a workbook. Stay under 15 model calls: do not re-parse the spreadsheets in chat, and do not retry a `LOGIN_REQUIRED` result.
+Read the short JSON they print. A day is verified only when `figures_final` is true, which is `afsa_checks.py final`. If that is not true, do not quote any figure as final, even when a cron status says ok. If `outcome` is `verified_disagree`, say what Membr card and the processor total show, and that Vince can look the receipts up in Membr or the Paycomet and Redsys reports. Do not change a platform figure, and do not invent a workbook. Harlands is not part of this daily row. Stay under 15 model calls: do not re-parse the spreadsheets in chat, and do not retry a `LOGIN_REQUIRED` result.
 
 ## What to avoid
 

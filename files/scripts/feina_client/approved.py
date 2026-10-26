@@ -1,8 +1,8 @@
-"""Call the approved AFSA scripts. This module does not reimplement them.
+"""Call the approved AFSA scripts. Do not reimplement them.
 
-Those scripts are not in this template. When they are on the client computer,
-the night job feeds them the downloaded files and uses their row unchanged.
-No gap and no tolerance is read or applied here.
+The copies under afsa-ingresos/approved/ are the production scripts and the
+approved membr-card-reconciliation skill. Their sha256 values are in
+hashes.json. A mismatch means the day is not checked.
 """
 
 from __future__ import annotations
@@ -16,127 +16,112 @@ from pathlib import Path
 from .runtime import client_root, hermes_home, sha256_file
 
 
-def _candidates() -> list[Path]:
-    env_checks = os.environ.get("FEINA_AFSA_CHECKS", "")
-    env_update = os.environ.get("FEINA_UPDATE_WORKBOOK", "")
-    roots = [
-        client_root() / "approved",
-        hermes_home() / "scripts",
-        hermes_home() / "skills",
-        Path(__file__).resolve().parents[1],
-        Path(__file__).resolve().parents[3] / "files" / "scripts",
-        Path(__file__).resolve().parents[3] / "files" / "skills",
-    ]
-    return roots, env_checks, env_update
+def approved_roots() -> list[Path]:
+    env = os.environ.get("FEINA_AFSA_APPROVED", "")
+    roots = []
+    if env:
+        roots.append(Path(env).expanduser())
+    roots.append(client_root() / "approved")
+    roots.append(hermes_home() / "skills" / "client-drop" / "afsa-ingresos" / "approved")
+    roots.append(hermes_home() / "skills" / "afsa-ingresos" / "approved")
+    roots.append(Path(__file__).resolve().parents[3] / "files" / "skills" / "client-drop" / "afsa-ingresos" / "approved")
+    return roots
 
 
 def find_approved() -> dict | None:
-    """Return paths only when both approved scripts exist. Otherwise None."""
-    roots, env_checks, env_update = _candidates()
-    checks = Path(env_checks).expanduser() if env_checks else None
-    update = Path(env_update).expanduser() if env_update else None
-    if checks is None or update is None:
-        for root in roots:
-            if checks is None and (root / "afsa_checks.py").is_file():
-                checks = root / "afsa_checks.py"
-            if update is None and (root / "update_workbook.py").is_file():
-                update = root / "update_workbook.py"
-    if checks is None or update is None or not checks.is_file() or not update.is_file():
-        return None
-    spec = _find_spec(roots)
-    skill = _find_skill(roots)
-    return {
-        "checks": checks,
-        "update": update,
-        "spec": spec,
-        "skill": skill,
-        "spec_sha256": sha256_file(spec) if spec else "",
-    }
-
-
-def _find_spec(roots: list[Path]) -> Path | None:
-    for root in roots:
-        direct = root / "references" / "af-ingresos-daily.md"
-        if direct.is_file():
-            return direct
-        if not root.is_dir():
+    """Return the script paths only when every recorded hash matches."""
+    for root in approved_roots():
+        manifest = root / "hashes.json"
+        checks = root / "afsa_checks.py"
+        update = root / "update_workbook.py"
+        if not manifest.is_file() or not checks.is_file() or not update.is_file():
             continue
-        for path in root.rglob("af-ingresos-daily.md"):
-            return path
+        recorded = json.loads(manifest.read_text(encoding="utf-8")).get("files") or {}
+        mismatched = [name for name, digest in recorded.items() if sha256_file(root / name) != digest]
+        if mismatched:
+            return {"root": root, "ok": False, "mismatched": mismatched}
+        skill = root / "skill"
+        return {
+            "root": root,
+            "ok": True,
+            "checks": checks,
+            "update": update,
+            "skill": skill if skill.is_dir() else None,
+            "hashes": recorded,
+            "mismatched": [],
+        }
     return None
 
 
-def _find_skill(roots: list[Path]) -> Path | None:
-    for root in roots:
-        direct = root / "membr-card-reconciliation"
-        if direct.is_dir():
-            return direct
-        nested = root / "skills" / "membr-card-reconciliation"
-        if nested.is_dir():
-            return nested
-    return None
-
-
-def run_export(
-    checks: Path,
-    *,
-    business_date: str,
-    membr: Path,
-    paycomet: Path | None,
-    harlands: Path | None,
-) -> dict:
-    """`afsa_checks.py export`. Stdout must be JSON. Figures are not edited."""
-    cmd = [
-        sys.executable,
-        str(checks),
-        "export",
-        "--date",
-        business_date,
-        "--membr",
-        str(membr),
-    ]
-    if paycomet is not None:
-        cmd.extend(["--paycomet", str(paycomet)])
-    if harlands is not None:
-        cmd.extend(["--harlands", str(harlands)])
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
-    if proc.returncode != 0:
-        return {"status": "unverified", "reason": "checks_failed"}
+def _run(script: Path, args: list[str]) -> dict:
+    proc = subprocess.run(
+        [sys.executable, str(script), *args],
+        capture_output=True,
+        text=True,
+        timeout=180,
+    )
+    line = ""
+    for candidate in reversed(proc.stdout.splitlines()):
+        if candidate.strip():
+            line = candidate.strip()
+            break
     try:
-        data = json.loads(proc.stdout)
+        data = json.loads(line) if line else {"result": "ERROR", "problems": ["checks_output"]}
     except json.JSONDecodeError:
-        return {"status": "unverified", "reason": "checks_output"}
+        data = {"result": "ERROR", "problems": ["checks_output"]}
     if not isinstance(data, dict):
-        return {"status": "unverified", "reason": "checks_output"}
+        data = {"result": "ERROR", "problems": ["checks_output"]}
+    data["returncode"] = proc.returncode
     return data
 
 
-def run_update(
-    script: Path,
-    *,
-    workbook: Path,
-    business_date: str,
-    row_number: int,
-    cells: list[str],
-    row_json: Path,
-) -> None:
-    row_json.parent.mkdir(parents=True, exist_ok=True)
-    row_json.write_text(
-        json.dumps({"date": business_date, "row_number": row_number, "cells": cells}),
-        encoding="utf-8",
+def _slack_flag(enabled: bool) -> list[str]:
+    return ["--slack-on-fail"] if enabled else []
+
+
+def run_export(checks: Path, *, business_date: str, xlsx: Path, slack_on_fail: bool = True) -> dict:
+    """`afsa_checks.py export --business-date D XLSX`."""
+    return _run(
+        checks,
+        ["export", "--business-date", business_date, *_slack_flag(slack_on_fail), str(xlsx)],
     )
-    cmd = [
-        sys.executable,
-        str(script),
-        "--workbook",
-        str(workbook),
-        "--date",
-        business_date,
-        "--row-number",
-        str(row_number),
-        "--row-json",
-        str(row_json),
-    ]
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
-    if proc.returncode != 0:
-        raise RuntimeError("update_workbook failed")
+
+
+def run_dates(
+    checks: Path,
+    *,
+    business_date: str,
+    pdfs: list[Path],
+    evidence: list[Path] | None = None,
+    slack_on_fail: bool = True,
+) -> dict:
+    """`afsa_checks.py dates --business-date D [--evidence JSON]... PDF...`."""
+    args = ["dates", "--business-date", business_date, *_slack_flag(slack_on_fail)]
+    for path in evidence or []:
+        args.extend(["--evidence", str(path)])
+    args.extend(str(path) for path in pdfs)
+    return _run(checks, args)
+
+
+def run_update(script: Path, *, source: Path, payload: Path, output: Path) -> dict:
+    """`update_workbook.py SOURCE.xlsx PAYLOAD.json OUTPUT.xlsx`."""
+    return _run(script, [str(source), str(payload), str(output)])
+
+
+def run_final(
+    checks: Path,
+    *,
+    business_date: str,
+    since: str | None = None,
+    slack_on_fail: bool = True,
+) -> dict:
+    """`afsa_checks.py final --business-date D [--since ISO]`. This is the only verifying step."""
+    args = ["final", "--business-date", business_date, *_slack_flag(slack_on_fail)]
+    if since:
+        args.extend(["--since", since])
+    return _run(checks, args)
+
+
+def run_gaps(checks: Path, *, business_date: str, slack_on_fail: bool = True) -> dict:
+    """`afsa_checks.py gaps --business-date D`. The skill passes the day after the business date."""
+    return _run(checks, ["gaps", "--business-date", business_date, *_slack_flag(slack_on_fail)])

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
 import pytest
@@ -51,6 +52,11 @@ def test_apply_backs_up_with_sha256_and_registers_wrappers(tmp_path):
     assert "feina_proactive.py" in wrapper
     assert "--slot" in wrapper
     assert bodies
+    skill = dest / "skills" / "membr-card-reconciliation" / "SKILL.md"
+    assert skill.is_file()
+    recorded = json.loads((dest / "feina-client" / "skill-hashes.json").read_text(encoding="utf-8"))
+    assert recorded["skill"] == "membr-card-reconciliation"
+    assert recorded["files"]["SKILL.md"] == hashlib.sha256(skill.read_bytes()).hexdigest()
 
 
 def test_scan_refuses_orgo_keys_and_slack_hooks(tmp_path):
@@ -98,3 +104,4 @@ def test_cron_lines_match_jobs_that_need_arguments():
     assert "--deliver telegram" in text
     assert "--deliver local" in text
     assert "feina_eval_workbook.py" in text
+    assert "feina_eval_skill_hash.py" in text

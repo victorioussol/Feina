@@ -1,0 +1,11 @@
+{
+  "business_date": "2026-10-20",
+  "gym": "Anytime Fitness Sant Adria",
+  "membr_available": true,
+  "mailbox_search_succeeded": true,
+  "pos_total_net": "135.49",
+  "pos_card": "159.49",
+  "pos_noncard_net": "-24.00",
+  "payment_report_found": true,
+  "payment_reports_total": "159.49"
+}

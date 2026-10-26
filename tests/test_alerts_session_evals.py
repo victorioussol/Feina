@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from feina_client.evals import session_eval, step_budget, workbook_eval
+from feina_client.evals import session_eval, skill_hash_eval, step_budget, workbook_eval
 from feina_client.runtime import assert_ops_text, format_alert, post_ops_alert, should_send_alert
 from feina_client.session import apply_login_check, covers_0400, earliest_expiry, note_page_result
 from feina_client.xlsxio import write_xlsx
@@ -114,8 +115,7 @@ def test_playwright_expiry_is_not_read_as_chrome_microseconds():
 def test_workbook_step_and_session_evals(tmp_path):
     now = at(2026, 10, 26, 6, 0)
     book = tmp_path / "AFSA-Ingresos.xlsx"
-    cells = ["2026-10-25", "10.00", "10.00", "0.00", "0", "ok", "note", "H"]
-    write_xlsx(book, {"AFSA": [["day", "a", "b", "c", "d", "e", "f", "H"], cells]})
+    write_xlsx(book, {"AFSA": [["day"], ["2026-10-25"]]})
     stamp = at(2026, 10, 26, 5, 30).timestamp()
     import os
 
@@ -127,7 +127,8 @@ def test_workbook_step_and_session_evals(tmp_path):
         "confirmed_write": True,
         "outcome": "verified_match",
         "figures_final": True,
-        "readback": {"row_number": 2, "cells": cells},
+        "column_H_hidden": False,
+        "checks": {"final": {"result": "PASS"}},
     }
     assert workbook_eval(status, book, now) == (True, "ok")
     status["confirmed_write"] = False
@@ -141,3 +142,16 @@ def test_workbook_step_and_session_evals(tmp_path):
     stale = (now - timedelta(hours=13)).isoformat()
     assert session_eval(stale, True, now)[1] == "session_stale"
     assert session_eval(fresh, False, now)[1] == "login_page"
+
+
+def test_skill_hash_eval_alerts_when_an_approved_file_changes(tmp_path):
+    skill = tmp_path / "membr-card-reconciliation"
+    skill.mkdir()
+    body = skill / "SKILL.md"
+    body.write_text("approved\n", encoding="utf-8")
+    digest = hashlib.sha256(body.read_bytes()).hexdigest()
+    recorded = {"files": {"SKILL.md": digest}}
+    assert skill_hash_eval(recorded, skill) == (True, "ok")
+    body.write_text("edited by a background review\n", encoding="utf-8")
+    assert skill_hash_eval(recorded, skill) == (False, "skill_hash_drift")
+    assert skill_hash_eval({"files": {}}, skill) == (False, "skill_hash_drift")

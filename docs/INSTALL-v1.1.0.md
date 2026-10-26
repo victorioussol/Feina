@@ -93,38 +93,35 @@ Do this once, with a person watching the browser. Membr must already be logged i
 
    Check the xlsx opens and the SHA-256 in the manifest matches `sha256sum` of the file.
 
-8. From the inspect manifest, copy the real on-screen row-count and total selectors into the `read_screen` step. A night with no captured screen total is `NEEDS_CONFIRMATION` and is not written as a €0 day.
+8. From the inspect manifest, copy the real on-screen row-count and total selectors into the `read_screen` step. The download stores that text and saves the file as `runs/<date>/pos-export.xlsx`. It does not rebuild the workbook. `afsa_checks.py export` is the check: sheets `Informe` and `Informe Meta Data`, report name `Transaccion Punto de Venta`, a period that covers the whole business date, and a download time after that day ended. The on-screen text is not compared with the one-day total, because a real export may cover more than that day.
 
-9. Install the approved scripts by hand. This template does not contain them:
+9. The installer copies the approved skill to `skills/membr-card-reconciliation/` and writes `feina-client/skill-hashes.json`. The scripts `afsa_checks.py` and `update_workbook.py` are already in the template under `skills/client-drop/afsa-ingresos/approved/`, with sha256 in `hashes.json`. Do not edit them. A hash mismatch is `CHECKS_UNAVAILABLE`. The 06:15 eval alerts Slack (`skill_hash_drift`) if the installed skill files change. It does not rewrite them.
 
-   - `afsa_checks.py` (subcommand `export`)
-   - `update_workbook.py`
-   - the `membr-card-reconciliation` skill
-   - `references/af-ingresos-daily.md`
+   On Hermes v0.21.7 the automatic background review is `auxiliary.background_review.enabled` in `~/.hermes/config.yaml` (default true, and a broken config leaves it on). Set it to `false` to stop that fork from editing skills. `skills.creation_nudge_interval: 0` only stops the skill-review trigger; at this pin the memory-review fork still has the skills toolset. This installer does not change that config on a client.
 
-   Put the two scripts in `/root/.hermes/scripts/` or point `FEINA_AFSA_CHECKS` and `FEINA_UPDATE_WORKBOOK` at them. Do not edit their gap or tolerance. This template applies none of its own.
-
-10. Enable `afsa-ingresos`. The workbook must already be Vince's AFSA Ingresos file (one row per day, column H visible). The script will not create a new one.
+10. Enable `afsa-ingresos`. The workbook must already be Vince's AFSA Ingresos file. Column H is Comentario and is never written. Harlands is not an input. The payment total comes from `daily-payload.json`; `dates` only checks the Redsys and Paycomet PDFs.
 
     ```bash
     python3 /root/.hermes/scripts/afsa_reconcile.py --date yesterday \
-      --membr ~/.hermes/feina-client/runs/<yesterday>/membr-pos-<yesterday>.xlsx \
-      --paycomet ~/.hermes/feina-client/inbox/paycomet-<yesterday>.xlsx \
-      --harlands ~/.hermes/feina-client/inbox/harlands-<yesterday>.xlsx \
-      --workbook /path/to/AFSA-Ingresos.xlsx
+      --membr ~/.hermes/feina-client/runs/<yesterday>/pos-export.xlsx \
+      --pdf ~/.hermes/feina-client/runs/<yesterday>/<redsys>.pdf \
+      --pdf ~/.hermes/feina-client/runs/<yesterday>/<paycomet>.pdf \
+      --evidence ~/.hermes/feina-client/runs/<yesterday>/processor-evidence.json \
+      --payload ~/.hermes/feina-client/runs/<yesterday>/daily-payload.json \
+      --workbook /path/to/AFSA\ Ingresos.xlsx
     ```
 
-    `confirmed_write: true` is allowed only when `figures_final` is true. `outcome` is `verified_match`, `verified_disagree`, or `unverified`. An unverified result quotes no figure. If the approved scripts are missing, the status is `CHECKS_UNAVAILABLE` and the workbook is untouched.
+    `figures_final: true` only after `afsa_checks.py final` PASSes. That command reads `/root/.hermes/automation/af-ingresos/last-success.json`, which is written after the Drive read-back, not by this template. Until then the outcome is unverified and no figure is final. There is no tolerance.
 
-11. Only then review `CRON-COMMANDS.sh` and register the jobs you enabled. Paycomet and Harlands files are required for a cross-check. A Membr-only day is reported as not cross-checked and is not called clean.
+11. Only then review `CRON-COMMANDS.sh` and register the jobs you enabled. The 06:00 workbook eval passes only when `final` has passed.
 
-12. A hand-checked day is not in this template. `20 Oct 2026` as workbook row 294 is an example of the layout, not an expected result. When a checked day exists, drop its JSON (`date`, `row_number`, `cells`) into the golden fixture directory and run the harness. Until then the harness reports that nothing was supplied.
+12. The golden day is 20 Oct 2026, sheet `2026`, row 294. Its Membr export is not in the fixture, so that test uses `daily-payload.json` and says `export` is not covered. A later export can be dropped in `tests/fixtures/golden/pending-membr-export/`.
 
 ## What stays manual
 
 - Registering cron (the shell file is a review list).
 - The human Membr login, including the captcha.
-- Uploading the workbook to Drive. Composio is not available to a no-agent script on v0.21.7. After the local write is confirmed, a short model turn can upload and must run `afsa_reconcile.py --verify-drive`.
+- Uploading the workbook to Drive and writing `last-success.json`. Composio is not available to a no-agent script on v0.21.7. After the original file is read back, write that JSON (business date, `report_readback_verified` true, the original Drive id, md5, timestamp) and run `afsa_checks.py final`. `afsa_reconcile.py --verify-drive` only checks the metadata dict; it does not mark the day verified.
 - Turning on each proactive flag.
 - Any message to a member or to the gestor. Those are drafts until the client says yes.
 

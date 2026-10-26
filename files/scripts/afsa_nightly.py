@@ -51,6 +51,7 @@ def main(argv: list[str] | None = None) -> int:
             "NEEDS_CONFIRMATION": "needs_confirmation",
             "SCREEN_MISMATCH": "screen_mismatch",
             "CHECKS_UNAVAILABLE": "checks_unavailable",
+            "CHECK_FAIL": "check_failed",
             "FAILED": "readback_mismatch",
         }.get(status, {
             "login": "login_page",

@@ -3,7 +3,10 @@
 The script attaches to the browser profile that is already logged in. It never
 types a password, never fills anything except a date, and never calls a Membr
 URL other than the configured club home page. If that page is a login or a
-captcha, it stops.
+captcha, it stops. The POS file is saved as pos-export.xlsx, which is the name
+`afsa_checks.py export` reads. The bytes are Membr's own download; this script
+does not rebuild the workbook. It also stores Membr's on-screen count and total
+as text. That text is not a substitute for the export check.
 """
 
 from __future__ import annotations

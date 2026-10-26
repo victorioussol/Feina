@@ -49,6 +49,8 @@ ALERT_CODES = frozenset(
         "needs_confirmation",
         "screen_mismatch",
         "checks_unavailable",
+        "check_failed",
+        "skill_hash_drift",
     }
 )
 

@@ -9,6 +9,7 @@ directory). Cron commands are written to a shell file and are not executed.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import sys
@@ -43,6 +44,7 @@ SCRIPT_NAMES = (
     "feina_eval_workbook.py",
     "feina_eval_steps.py",
     "feina_eval_session.py",
+    "feina_eval_skill_hash.py",
 )
 
 BANNED_SNIPPETS = ("ORGO_API_KEY=", "hooks.slack.com/", "BEGIN OPENSSH PRIVATE KEY")
@@ -166,11 +168,36 @@ def apply(dest: Path, enabled: list[str], backup_root: Path) -> None:
                 agents.write_text(current.rstrip() + "\n\n" + snippet + "\n", encoding="utf-8")
         else:
             agents.write_text(snippet + "\n", encoding="utf-8")
+    _install_approved_skill(dest, backup_root)
     commands = dest / "feina-client" / "CRON-COMMANDS.sh"
     if commands.exists():
         backup_file(commands, backup_root)
     commands.write_text(cron_lines(enabled), encoding="utf-8")
     os.chmod(commands, 0o600)
+
+
+def _install_approved_skill(dest: Path, backup_root: Path) -> None:
+    """Copy the approved skill and record its hashes. Do not edit a client's config."""
+    src = SRC_SKILLS / "afsa-ingresos" / "approved" / "skill"
+    recorded = json.loads((SRC_SKILLS / "afsa-ingresos" / "approved" / "hashes.json").read_text(encoding="utf-8"))
+    skill_files = {
+        name.split("/", 1)[1]: digest
+        for name, digest in (recorded.get("files") or {}).items()
+        if name.startswith("skill/")
+    }
+    target = dest / "skills" / "membr-card-reconciliation"
+    if target.exists():
+        for child in target.rglob("*"):
+            if child.is_file():
+                backup_file(child, backup_root)
+    shutil.copytree(src, target, dirs_exist_ok=True)
+    manifest = dest / "feina-client" / "skill-hashes.json"
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest.write_text(
+        json.dumps({"skill": "membr-card-reconciliation", "files": skill_files}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    os.chmod(manifest, 0o600)
 
 
 def main(argv: list[str] | None = None) -> int:

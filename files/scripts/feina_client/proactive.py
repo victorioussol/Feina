@@ -21,10 +21,9 @@ TEXTS = {
         "ack": "Je m'en occupe. Je vous écris dès que c'est prêt.",
         "queued": "Je termine encore une tâche. Celle-ci est en file d'attente.",
         "nightly_busy": "Le traitement de la nuit est en cours. Votre demande est en file d'attente.",
-        "daily_clean": "✅ AFSA Ingresos est prêt pour le {date}. Vérifié : Membr, Paycomet et Harlands concordent.",
+        "daily_clean": "✅ AFSA Ingresos est prêt pour le {date}. Vérifié : la carte Membr et les rapports Redsys et Paycomet concordent.",
         "daily_bad": "Vérifié pour le {date}, mais les plateformes ne concordent pas. {n} écart(s) :\n{lines}\nÀ contrôler : {hint}\nJe ne modifie aucun chiffre des plateformes.",
         "daily_unverified": "Je n'ai pas pu vérifier le {date} ({reason}). Aucun chiffre n'est donné comme définitif.",
-        "membr_only": "Membr seulement pour le {date}, pas de contrôle croisé. Aucun chiffre n'est donné comme définitif.",
         "monday_empty": "",
         "monday": "Lundi — ce qui a bougé :\n{lines}",
         "debits_none": "",
@@ -41,10 +40,9 @@ TEXTS = {
         "ack": "Me pongo con ello. Le escribo en cuanto esté listo.",
         "queued": "Sigo con otra tarea. La suya queda en cola.",
         "nightly_busy": "El cierre de la noche está en curso. Su petición queda en cola.",
-        "daily_clean": "✅ AFSA Ingresos está listo para el {date}. Verificado: Membr, Paycomet y Harlands coinciden.",
+        "daily_clean": "✅ AFSA Ingresos está listo para el {date}. Verificado: la tarjeta Membr y los informes Redsys y Paycomet coinciden.",
         "daily_bad": "Verificado para el {date}, pero las plataformas no coinciden. {n} descuadre(s):\n{lines}\nA revisar: {hint}\nNo modifico ninguna cifra de las plataformas.",
         "daily_unverified": "No he podido verificar el {date} ({reason}). No doy ninguna cifra como definitiva.",
-        "membr_only": "Solo Membr para el {date}, sin cruce. No doy ninguna cifra como definitiva.",
         "monday": "Lunes — solo lo que se ha movido:\n{lines}",
         "debits": "Adeudos devueltos: {n}.\n{lines}\nBorradores debajo. No se envía nada sin su sí.\n{drafts}",
         "draft": "Borrador para {ref} ({amount} €): hola, el adeudo del {date} no se ha cobrado. ¿Puede revisar el método de pago?",
@@ -59,10 +57,9 @@ TEXTS = {
         "ack": "On it. I'll message you when it's done.",
         "queued": "I'm still on another task. This one is queued.",
         "nightly_busy": "The night job is still running. Your request is queued.",
-        "daily_clean": "✅ AFSA Ingresos is ready for {date}. Verified: Membr, Paycomet and Harlands match.",
+        "daily_clean": "✅ AFSA Ingresos is ready for {date}. Verified: the Membr card total matches the Redsys and Paycomet reports.",
         "daily_bad": "Verified for {date}, but the platforms disagree. {n} item(s):\n{lines}\nCheck: {hint}\nI do not change any platform figure.",
         "daily_unverified": "I could not verify {date} ({reason}). No figure is given as final.",
-        "membr_only": "Membr only for {date}, not cross-checked. No figure is given as final.",
         "monday": "Monday — only what moved:\n{lines}",
         "debits": "Failed direct debits: {n}.\n{lines}\nDrafts below. Nothing is sent without your yes.\n{drafts}",
         "draft": "Draft for {ref} ({amount}): hello, the {date} collection did not go through. Could you check the payment method?",
@@ -269,8 +266,8 @@ def notable_changes(current: dict, previous: dict, *, minimum: float = 1, percen
 def _item_line(row: dict) -> str:
     receipt = row.get("receipt") or row.get("ref") or ""
     parts = [str(receipt)]
-    for system in ("membr", "paycomet", "harlands"):
-        if row.get(system):
+    for system in ("membr", "bank", "paycomet", "difference"):
+        if row.get(system) not in (None, ""):
             parts.append(f"{system} {row.get(system)}")
     return " ".join(part for part in parts if part)
 
@@ -280,9 +277,6 @@ def compose_daily(lang: str, night: dict | None, *, when_clean: bool) -> str | N
     if not night:
         return None
     when = night.get("business_date") or ""
-    phrase = night.get("phrase") or ""
-    if phrase == "Membr only, not cross-checked" or night.get("reason") == "membr_only":
-        return text(lang, "membr_only", date=when)
     outcome = night.get("outcome")
     if outcome == "verified_match" and night.get("confirmed_write") and night.get("figures_final"):
         if not when_clean:
@@ -305,6 +299,7 @@ def compose_daily(lang: str, night: dict | None, *, when_clean: bool) -> str | N
         "NEEDS_CONFIRMATION",
         "SCREEN_MISMATCH",
         "CHECKS_UNAVAILABLE",
+        "CHECK_FAIL",
         "LOGIN_REQUIRED",
         "FAILED",
     }:

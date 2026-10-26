@@ -69,3 +69,11 @@ jobs:
     script: feina_eval_session.py
     deliver: local
     no_agent: true
+  - id: eval-skill-hash
+    part: afsa-evals
+    register: true
+    schedule: "every day at 6:15"
+    script: feina_eval_skill_hash.py
+    deliver: local
+    no_agent: true
+    note: "Alerts if the approved skill files were edited. Does not change them."

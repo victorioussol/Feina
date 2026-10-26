@@ -1,6 +1,6 @@
 # Local workbook settings. Drive upload stays a separate, explicit step.
-# No gap and no tolerance live here. afsa_checks.py owns any comparison
-# tolerance, and that script is not part of this template.
+# The approved scripts have no tolerance. Amounts match to the cent.
+# Harlands is not an input of this daily row.
 workbook: "workbooks/AFSA-Ingresos.xlsx"
 tolerance: null
 require_drive_readback: false

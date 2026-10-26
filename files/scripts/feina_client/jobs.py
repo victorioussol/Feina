@@ -74,7 +74,7 @@ def run_nightly(
         return payload
     try:
         previous = load_night(night)
-        if previous.get("confirmed_write") and previous.get("business_date") == business:
+        if previous.get("figures_final") and previous.get("business_date") == business:
             return previous
         out_dir = membr_dir or (client_root() / "runs" / business)
         if session is None:
@@ -111,14 +111,16 @@ def run_nightly(
         membr_item = files.get(cfg.get("pos_report_id") or "pos_transactions") or {}
         membr_path = Path(membr_item["path"]) if membr_item.get("path") else None
         inbox_dir = inbox or (client_root() / "inbox")
-        paycomet_path = inbox_dir / f"paycomet-{business}.xlsx"
-        harlands_path = inbox_dir / f"harlands-{business}.xlsx"
+        pdfs = sorted(out_dir.glob("*.pdf")) + sorted((inbox_dir / business).glob("*.pdf"))
+        evidence = [out_dir / "processor-evidence.json"]
+        payload_path = out_dir / "daily-payload.json"
         book = workbook or (client_root() / "workbooks" / "AFSA-Ingresos.xlsx")
         reviewed = review_day(
             business_date=date.fromisoformat(business),
             membr=membr_path,
-            paycomet=paycomet_path if paycomet_path.is_file() else None,
-            harlands=harlands_path if harlands_path.is_file() else None,
+            pdfs=pdfs,
+            evidence=evidence,
+            payload_path=payload_path if payload_path.is_file() else None,
             workbook=book if book.is_file() else None,
             screen_count_text=membr_item.get("screen_count_text"),
             screen_total_text=membr_item.get("screen_total_text"),

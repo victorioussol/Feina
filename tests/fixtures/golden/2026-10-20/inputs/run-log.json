@@ -1,0 +1,63 @@
+{
+  "business_date": "2026-10-20",
+  "status": "completed_readback_verified",
+  "mailbox_search_succeeded": true,
+  "mailbox_messages": 25,
+  "provider_reports_found": ["Paycomet next-day report", "Redsys slips"],
+  "payment_report_total": "159.49",
+  "date_check": {
+    "strict_initial_result": "FAIL",
+    "strict_initial_problem": "Redsys slip dates are printed dd.mm.yy and were not recognized by the configured parser",
+    "normalized_in_memory_recheck": "PASS",
+    "pdfs_checked": [
+      {"file": "6874_347360075_99871480206_20102026.pdf", "transactions": 2, "dates": ["2026-10-20", "2026-10-20"], "duplicate_reuse": false},
+      {"file": "resumen_347360075_T0000001_202610210123.pdf", "transactions": 1, "dates": ["2026-10-20"], "duplicate_reuse": false}
+    ]
+  },
+  "membr_pos_source": {
+    "file": "Transaccion Punto de Venta2026-10-21 10-04-29.xlsx",
+    "scope": "Anytime Fitness Sant Adria; report metadata 2026-10-01 through 2026-10-20; filtered to 2026-10-20",
+    "transaction_lines": 9,
+    "receipts": 6,
+    "total_net": "135.49",
+    "card": "159.49",
+    "noncard_net": "-24.00"
+  },
+  "processor_breakdown": {
+    "Paycomet": {"count": 1, "amount": "39.69"},
+    "Redsys": {"count": 2, "amount_each": "59.90", "amount_total": "119.80"}
+  },
+  "drive_update": {
+    "result": "updated original in place and verified by read-back",
+    "file_id": "1S8Il6uG1sDfpN3T9xSnMxiMKyVLpUHl0",
+    "file_name": "AFSA Ingresos.xlsx",
+    "md5": "3564c0d0acebe9aa040a3a135d038d6e",
+    "sheet": "2026",
+    "row": 294,
+    "values_C_to_G": ["135.49", "159.49", "-24.00", "159.49", "0.00"],
+    "formulas": {"D294": "=C294-E294", "G294": "=F294-D294"},
+    "fill": "white",
+    "difference_number_colour": "green",
+    "tabs_preserved": ["2026", "2025", "2024", "2023", "2022"],
+    "non_target_values_formulas_caches_and_cell_styles_unchanged": true,
+    "H_column_visibility_and_entries_preserved": {"visible": true, "entries": 67}
+  },
+  "difference": "0.00",
+  "alert": "not_sent_zero_difference",
+  "transaction_level_caveat": "The Redsys total of 119.80 equals a single Membr card receipt, but the two Redsys slips at 12:52 and the POS entry at 13:27:35 are 35 minutes 35 seconds apart; without a shared reference, that mapping is unconfirmed.",
+  "bank_settlement": "not_checked",
+  "reverification_2026_10_21": {
+    "verified_at": "2026-10-21T11:23:15Z",
+    "strict_date_check": "PASS",
+    "date_check_results": "Paycomet 1 operation and Redsys 2 slips, all dated 2026-10-20; no report reuse detected",
+    "membr_export_check": "PASS",
+    "membr_export_counts": {"transaction_lines": 9, "receipts": 6},
+    "membr_export_totals": {"pos_total_net": "135.49", "pos_card": "159.49", "pos_noncard_net": "-24.00"},
+    "current_drive_revision_modified": "2026-10-21T08:25:57.060Z",
+    "current_drive_md5": "e6945ba1d38556e655c24810232337d7",
+    "verified_row": "2026!294",
+    "values_C_to_G": ["135.49", "159.49", "-24.00", "159.49", "0.00"],
+    "comparison_with_preceding_verified_revision": "cell values and formula caches identical; only target row C:G number formats and package serialization changed",
+    "alert": "not_sent_zero_difference"
+  }
+}

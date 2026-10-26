@@ -12,16 +12,11 @@ browser:
     - PHPSESSID
     - membr_session
     - MEMBRSESSID
-sources:
-  paycomet:
-    required: false
-  harlands:
-    required: false
 reports:
   - id: pos_transactions
     enabled: true
     required: true
-    filename: "membr-pos-{date}.xlsx"
+    filename: "pos-export.xlsx"
     note: >
       POS transactions for the target day. The English name "POS Transactions
       Report" is in the public EU manual. The Spanish label is the one the

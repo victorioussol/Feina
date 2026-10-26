@@ -1,0 +1,38 @@
+{
+  "card_placeholders": {
+    "card_A (Redsys slips)": "************0001",
+    "card_B (Paycomet)": "************0002"
+  },
+  "files": {
+    "6874_347360075_99871480206_20102026.pdf": {
+      "sha256": "ae04959884b0bfe9332388df030e99988413925f314a6411d9da3399dbe77af6",
+      "md5": "a707c609b9aac5e683da3dae85c85387",
+      "raw_md5": "c2b71c5140e607c1c3dd52942fb5cd29",
+      "sanitized": true
+    },
+    "daily-payload.json": {
+      "sha256": "aa1f2ae116136c8f912ae9db6e7458a5919fc84637bb011f07420cbfe2c555be",
+      "md5": "4039dc1db9df7d21d7e1673a6ef315d9",
+      "raw_md5": "4039dc1db9df7d21d7e1673a6ef315d9",
+      "sanitized": false
+    },
+    "processor-evidence.json": {
+      "sha256": "fbaf400fd641ea23525a1dafe6997d03d88ea694398d122c445cc4051fd989c8",
+      "md5": "e9f2d63fc6f683611e0690360ae19787",
+      "raw_md5": "e9f2d63fc6f683611e0690360ae19787",
+      "sanitized": false
+    },
+    "resumen_347360075_T0000001_202610210123.pdf": {
+      "sha256": "1f8bbe5758c7f432e94d27734ba35a4c4b79ef8e952059db06964c98892d3552",
+      "md5": "6ea870d294dc9b47013c4f3e393e338f",
+      "raw_md5": "6c161ac3249db4d02ac5225654b01fee",
+      "sanitized": true
+    },
+    "run-log.json": {
+      "sha256": "18db319abe81ac703d50b67432910b7e702275c89a44411d68e442a6a0f15567",
+      "md5": "8a4a8fa67afedde65182ca114cba2ff7",
+      "raw_md5": "8a4a8fa67afedde65182ca114cba2ff7",
+      "sanitized": false
+    }
+  }
+}
