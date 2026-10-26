@@ -284,6 +284,26 @@ def test_unrecognized_supervised_process_cannot_bypass_activity_gate(gateway, mo
     assert not (mod.HOME / 'term.log').exists()
 
 
+@pytest.mark.parametrize("retained", ["matching", "reused", "malformed"])
+def test_retained_gateway_identity_distinguishes_pid_reuse(gateway, retained):
+    mod, _, old = gateway
+    mod.supervisor('stop', 'hermes-gateway')
+    assert not mod.gateways()
+    observer = mod.process(os.getpid())
+    recorded = observer.start + 1 if retained == 'reused' else observer.start
+    body = {'pid': observer.pid, 'start_time': 'bad' if retained == 'malformed' else recorded}
+    (mod.HOME / 'gateway_state.json').write_text(json.dumps(body))
+    if retained == 'reused':
+        mod.restart()
+        assert len(mod.gateways()) == 1
+        assert mod.gateways()[0].pid != old.pid
+    else:
+        with pytest.raises(mod.Refused, match='identity|unrecognized'):
+            mod.restart()
+        assert not mod.gateways()
+    assert mod.process(observer.pid) == observer
+
+
 def test_parallel_restart_is_refused_without_stopping(gateway, monkeypatch):
     import fcntl
     mod, _, old = gateway

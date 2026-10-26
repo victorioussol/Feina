@@ -157,17 +157,20 @@ def restart() -> None:
     if not old_pids:
         if supervisor("pid", "hermes-gateway", allow_missing=True) not in {"0", "missing"}:
             raise Refused("supervised process has unknown activity; start/reload refused")
+        missing = object()
         try:
             body = json.loads((HOME / "gateway_state.json").read_text())
         except FileNotFoundError:
-            body = {}
+            body = missing
         except (OSError, ValueError):
             raise Refused("unreadable retained gateway status; start refused") from None
-        if not isinstance(body, dict):
-            raise Refused("invalid retained gateway status; start refused")
-        pid = body.get("pid")
-        if type(pid) is int and pid > 0 and process(pid):
-            raise Refused("live gateway status has an unrecognized command; start refused")
+        if body is not missing:
+            if (not isinstance(body, dict) or type(body.get("pid")) is not int or body["pid"] <= 0
+                    or type(body.get("start_time")) is not int or body["start_time"] <= 0):
+                raise Refused("invalid retained gateway identity; start refused")
+            live = process(body["pid"])
+            if live and live.start == body["start_time"]:
+                raise Refused("live gateway status has an unrecognized command; start refused")
     marker = HOME / ".drain_request.json"
     marked = False
     marker_identity = None
