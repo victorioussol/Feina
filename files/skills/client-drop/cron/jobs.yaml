@@ -1,0 +1,71 @@
+# Cron definitions for Hermes v0.21.7. Nothing here is registered by bootstrap.
+# The computer timezone must be Europe/Madrid. Schedules use that local clock.
+# Ops jobs use deliver:local so a traceback cannot reach the client's Telegram.
+# The script posts Slack itself.
+jobs:
+  - id: afsa-nightly
+    part: afsa-ingresos
+    register: true
+    schedule: "every day at 4:00"
+    script: afsa_nightly.py
+    deliver: local
+    no_agent: true
+  - id: membr-login-2000
+    part: membr-login-guard
+    register: true
+    schedule: "every day at 20:00"
+    script: membr_login_check.py
+    deliver: local
+    no_agent: true
+  - id: membr-login-0330
+    part: membr-login-guard
+    register: true
+    schedule: "every day at 3:30"
+    script: membr_login_check.py
+    deliver: local
+    no_agent: true
+  - id: membr-login-watch
+    part: membr-login-guard
+    register: true
+    schedule: "every 10m"
+    script: membr_login_watch.py
+    deliver: local
+    no_agent: true
+    note: "Reads the local cookie file. Opens Membr only when a re-run starts."
+  - id: proactive-morning
+    part: proactive-starters
+    register: true
+    schedule: "every day at 9:00"
+    script: feina_proactive.py
+    args: ["--slot", "morning"]
+    deliver: telegram
+    no_agent: true
+  - id: proactive-reminders
+    part: proactive-starters
+    register: true
+    schedule: "every 15m"
+    script: feina_proactive.py
+    args: ["--slot", "reminders"]
+    deliver: telegram
+    no_agent: true
+  - id: eval-workbook
+    part: afsa-evals
+    register: true
+    schedule: "every day at 6:00"
+    script: feina_eval_workbook.py
+    deliver: local
+    no_agent: true
+  - id: eval-steps
+    part: afsa-evals
+    register: true
+    schedule: "every day at 6:05"
+    script: feina_eval_steps.py
+    deliver: local
+    no_agent: true
+  - id: eval-session
+    part: afsa-evals
+    register: true
+    schedule: "every day at 6:10"
+    script: feina_eval_session.py
+    deliver: local
+    no_agent: true

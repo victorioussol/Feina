@@ -42,6 +42,9 @@ terminal:
   backend: local
   cwd: .
   timeout: 180
+  env_passthrough:
+  - FEINA_VINCE_SLACK_WEBHOOK
+  - FEINA_OPS_SLACK_WEBHOOK
   home_mode: auto
   container_cpu: 1
   container_memory: 5120

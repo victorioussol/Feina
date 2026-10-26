@@ -1,0 +1,10 @@
+# Copy to ~/.hermes/feina-client/client.yaml on the client computer.
+# Do not put secrets in this file. The Slack webhook stays in the environment.
+client_slug: vince
+language: fr
+timezone: Europe/Madrid
+slack_webhook_env: FEINA_VINCE_SLACK_WEBHOOK
+daily_when_clean: true
+gestor_to: ""
+gestor_subject: "AFSA mensual"
+gestor_body: ""

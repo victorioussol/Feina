@@ -1,0 +1,7 @@
+# Local workbook settings. Drive upload stays a separate, explicit step.
+workbook: "workbooks/AFSA-Ingresos.xlsx"
+gap_eur: 5
+require_drive_readback: false
+drive: NOT_RUN
+model_call_budget: 15
+duration_budget_minutes: 20

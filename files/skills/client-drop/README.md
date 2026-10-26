@@ -1,15 +1,29 @@
 # Client industry skills (drop-in)
 
-Feina does **not** bake industry packs (gym KPI, reconciliation, etc.) into the base image.
+The AFSA / Membr / proactive packs in this folder ship **disabled**. Bootstrap copies the files onto a new image and does not register their cron jobs, create their enable flags, or contact a live client computer.
 
-After bootstrap, copy skill folders here on the client computer:
+Turn a part on only as a separate, manually approved step on that computer:
 
-`/root/.hermes/skills/client-drop/<pack-name>/`
+```bash
+python3 ops/install_client_parts.py --dest /root/.hermes \
+  --enable membr-download --apply
+```
 
-Each pack should be a normal Hermes skill tree (`SKILL.md` + references). Restart the gateway after adding files:
+See [docs/INSTALL-v1.1.0.md](../../docs/INSTALL-v1.1.0.md). The installer backs up any file it would overwrite and records the SHA-256. It writes `CRON-COMMANDS.sh` and does not run it.
+
+Enable flags live at `/root/.hermes/feina-client/enabled/<part>`:
+
+| Flag | What it turns on |
+|---|---|
+| `membr-download` | Playwright download of Membr's own Excel exports |
+| `membr-login-guard` | 20:00 and 03:30 session check, one Slack alert, one re-run |
+| `telegram-background` | Instant acknowledgement and one long job per chat |
+| `proactive-starters` | The starter set. Each message type is still off in `proactive.yaml` |
+| `afsa-ingresos` | Nightly workbook. The model calls the scripts instead of clicking Membr |
+| `afsa-evals` | 06:00 workbook, step-budget, and session checks to Slack |
+
+Restart the gateway after copying skill files:
 
 ```bash
 supervisorctl restart hermes-gateway
 ```
-
-Feina ops can tar/copy packs over the Orgo bash API during launch.

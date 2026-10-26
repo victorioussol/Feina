@@ -1,0 +1,14 @@
+# Every behaviour stays off until someone turns a flag to true.
+enabled:
+  daily: false
+  monday: false
+  tax: false
+  month_end: false
+  reminders: false
+limits:
+  max_unprompted_per_day: 2
+  quiet_hours: "22:00-08:00"
+  ignore_pause_after: 3
+  morning_hour: 9
+  morning_tolerance_minutes: 20
+language_note: "Set language in client.yaml. Vince uses fr."
