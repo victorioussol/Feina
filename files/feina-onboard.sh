@@ -4,6 +4,9 @@ set -euo pipefail
 export HOME=/root
 export HERMES_HOME=/root/.hermes
 export PATH=/usr/local/bin:/root/.hermes/bin:/root/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH
+# shellcheck disable=SC1091
+[ -f /usr/local/bin/feina-hermes-path.sh ] && . /usr/local/bin/feina-hermes-path.sh
+feina_prepend_hermes_node_path 2>/dev/null || true
 
 ENV_FILE="$HERMES_HOME/.env"
 OP_ENV="$HERMES_HOME/.op.env"
@@ -307,13 +310,6 @@ PY
     strip_orgo_env "$ENV_FILE"
     strip_orgo_env /root/.env
     strip_openai_api_key "$ENV_FILE"
-    ORGO_HITS=$(grep -rE '^ORGO_API_KEY=|^ORGO_DEFAULT_COMPUTER_ID=' "$HERMES_HOME/.env" /root/.env 2>/dev/null | wc -l || echo 0)
-    if [ "$ORGO_HITS" -eq 0 ]; then
-      echo "Orgo keys in .env: none (good)"
-    else
-      echo "Orgo keys in .env: FOUND (BAD)"
-      exit 2
-    fi
     # shellcheck disable=SC1090
     set -a; [ -f "$OP_ENV" ] && . "$OP_ENV"; [ -f "$ENV_FILE" ] && . "$ENV_FILE"; set +a
     if [ -f /var/lib/orgo/feina-honcho-disabled ]; then
@@ -331,6 +327,21 @@ print("memory.provider:", (c.get("memory") or {}).get("provider") or "(empty)")
 lin=(c.get("mcp_servers") or {}).get("linear") or {}
 print("linear MCP enabled:", lin.get("enabled", False), "(must be False on clients)")
 PY
+    STATUS_FAIL=0
+    if grep -qE '^ORGO_API_KEY=|^ORGO_DEFAULT_COMPUTER_ID=' "$ENV_FILE" /root/.env 2>/dev/null; then
+      echo "Orgo keys in .env: FOUND (BAD)"
+      STATUS_FAIL=1
+    else
+      echo "Orgo keys in .env: none (good)"
+    fi
+    if grep -qE '^COMPOSIO_CONSUMER_KEY=.' "$ENV_FILE" 2>/dev/null; then
+      echo "Composio: COMPOSIO_CONSUMER_KEY set"
+    else
+      echo "Composio: not configured (in-meeting step)"
+    fi
+    if [ "$STATUS_FAIL" -ne 0 ]; then
+      exit 2
+    fi
     ;;
   ""|-h|--help|help)
     usage
