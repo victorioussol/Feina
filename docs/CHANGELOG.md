@@ -4,7 +4,7 @@
 
 Honcho memory was billing for automation runs. Launchers call `hermes chat ... --source cron`, the CLI marks those sessions interactive, and the Honcho plugin's own cron skip never fired. Every scheduled job paid for a Honcho lookup and was filed as if the client had said it.
 
-- `files/feina-honcho-patch.sh` (installed to `/usr/local/bin/feina-honcho-patch.sh`) patches `/root/.hermes/plugins/honcho/__init__.py` so Honcho is skipped when `HERMES_SESSION_SOURCE=cron`. It is idempotent, keeps a backup, checks syntax and restores on failure. `--check` exits 2 when the patch is missing. `gateway-run.sh` runs it before every gateway start, so it re-applies after Hermes or plugin updates. It is fail-open and does nothing if the Honcho plugin isn't installed.
+- `files/feina-honcho-patch.sh` (baked into the Orgo template and installed to `/usr/local/bin/feina-honcho-patch.sh`) patches `/root/.hermes/plugins/honcho/__init__.py` so Honcho is skipped when `HERMES_SESSION_SOURCE=cron`. It is idempotent, keeps a backup, checks syntax and restores on failure. `--check` exits 2 when the patch is missing. `gateway-run.sh` runs it before every gateway start, so it re-applies after Hermes or plugin updates. It is fail-open and does nothing if the Honcho plugin isn't installed.
 - `files/feina-honcho-apply.py` now writes `reasoningLevelCap: low`, `dialecticReasoningLevel: low` and `dialecticCadence: 2` into `hosts.hermes`. The cheapest automatic lookups run on every second client message. `recallMode` and `saveMessages` stay on the plugin defaults (hybrid / true).
 - Rule: every automation launcher that runs `hermes chat` must pass `--source cron`. The skill-maker lint warns when one doesn't.
 
