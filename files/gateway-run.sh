@@ -21,5 +21,7 @@ set +a
 
 mkdir -p /var/lib/orgo
 python3 /usr/local/bin/feina-honcho-sync.py 2>/dev/null || true
+# Re-apply the Feina Honcho cron-skip patch after any Hermes/plugin update (idempotent, fail-open).
+[ -x /usr/local/bin/feina-honcho-patch.sh ] && /usr/local/bin/feina-honcho-patch.sh >>/var/lib/orgo/feina-honcho-patch.log 2>&1 || true
 
 exec flock /var/lib/orgo/hermes-gateway.lock hermes gateway run --replace --accept-hooks

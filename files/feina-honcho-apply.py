@@ -30,6 +30,12 @@ def main() -> int:
                 "workspace": workspace_id,
                 "aiPeer": ai_peer,
                 "peerName": peer_name,
+                # Feina cost defaults (16 Nov 2026, Victor approved): cheapest automatic memory
+                # lookups, one every 2nd client message. recallMode/saveMessages stay on plugin
+                # defaults (hybrid / true).
+                "reasoningLevelCap": "low",
+                "dialecticReasoningLevel": "low",
+                "dialecticCadence": 2,
             }
         }
     }

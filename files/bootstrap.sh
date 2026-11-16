@@ -174,6 +174,7 @@ for pair in \
   "feina-honcho-sync.py:/usr/local/bin/feina-honcho-sync.py" \
   "feina-honcho-apply.py:/usr/local/bin/feina-honcho-apply.py" \
   "feina-honcho-push-receive.py:/usr/local/bin/feina-honcho-push-receive.py" \
+  "feina-honcho-patch.sh:/usr/local/bin/feina-honcho-patch.sh" \
   "feina-telegram-pending.py:/usr/local/bin/feina-telegram-pending.py" \
   "feina:/usr/local/bin/feina" \
   "telegram-pair.py:/usr/local/bin/feina-stack-telegram-pair.py" \
