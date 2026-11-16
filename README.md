@@ -115,6 +115,12 @@ feina-onboard setup-pre
 # … model-codex, telegram, secrets, safety-check
 ```
 
+## Honcho memory: cost rules
+
+- Automation launchers that run `hermes chat` must pass `--source cron`. The Feina Honcho patch (`files/feina-honcho-patch.sh`, re-applied on every gateway start) then keeps those runs out of Honcho. Scheduler agent jobs are already skipped by the plugin.
+- `feina-honcho-apply.py` writes the cheap lookup defaults (`reasoningLevelCap` and `dialecticReasoningLevel` set to `low`, `dialecticCadence` 2).
+- Check a client: `/usr/local/bin/feina-honcho-patch.sh --check` (0 = patched, 2 = missing).
+
 ## Client reliability parts (template v1.1.1)
 
 Membr download, the login check and one re-run, Telegram background jobs, proactive starters, and the no-LLM evals ship in the image and stay off. Turning a part on for a client computer is a separate step that a person approves. See [docs/INSTALL-v1.1.0.md](docs/INSTALL-v1.1.0.md) and [docs/CHANGELOG.md](docs/CHANGELOG.md).
